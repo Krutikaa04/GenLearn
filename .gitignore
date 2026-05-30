@@ -1,0 +1,13 @@
+# Next.js
+node_modules
+.next
+
+# Python
+venv
+__pycache__
+
+# Environment files
+.env
+
+# OS files
+.DS_Store
