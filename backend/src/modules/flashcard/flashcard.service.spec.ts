@@ -5,6 +5,7 @@ import { FlashcardSetStatus, FlashcardSourceType } from './schemas/flashcard.sch
 describe('FlashcardService', () => {
   let service: FlashcardService;
   let repository: { findById: jest.Mock; reviewCard: jest.Mock; getDueCards: jest.Mock };
+  let analytics: { recordActivity: jest.Mock };
   let queue: { add: jest.Mock };
 
   const makeSet = (overrides: Partial<any> = {}) => ({
@@ -23,8 +24,9 @@ describe('FlashcardService', () => {
       reviewCard: jest.fn(),
       getDueCards: jest.fn(),
     };
+    analytics = { recordActivity: jest.fn().mockResolvedValue(undefined) };
     queue = { add: jest.fn() };
-    service = new FlashcardService(repository as any, queue as any);
+    service = new FlashcardService(repository as any, analytics as any, queue as any);
   });
 
   describe('reviewCard / SM-2 scheduling', () => {

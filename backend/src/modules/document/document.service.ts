@@ -12,6 +12,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { DocumentRepository } from './document.repository';
 import { StorageService } from './storage.service';
 import { AiGatewayService } from '../ai-gateway/ai-gateway.service';
+import { AnalyticsService } from '../analytics/analytics.service';
 import { DocumentStatus, FileType } from './schemas/document.schema';
 import { DocumentAskDto } from './dto/document-ask.dto';
 import {
@@ -37,6 +38,7 @@ export class DocumentService {
     private readonly documentRepository: DocumentRepository,
     private readonly storageService: StorageService,
     private readonly aiGateway: AiGatewayService,
+    private readonly analyticsService: AnalyticsService,
     @InjectQueue(DOCUMENT_PROCESSING_QUEUE) private readonly processingQueue: Queue,
   ) {}
 
@@ -81,6 +83,7 @@ export class DocumentService {
     });
 
     this.logger.log(`Document ${documentId} uploaded and queued for processing`);
+    this.analyticsService.recordActivity(studentId, 'document').catch(() => {});
 
     return {
       documentId: document.documentId,

@@ -11,6 +11,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { FlashcardRepository } from './flashcard.repository';
 import { FlashcardSetStatus, FlashcardSourceType } from './schemas/flashcard.schema';
 import { GenerateFlashcardsDto } from './dto/generate-flashcards.dto';
+import { AnalyticsService } from '../analytics/analytics.service';
 import { FLASHCARD_GENERATION_QUEUE, FlashcardGenerationJob } from './workers/flashcard-generator.processor';
 
 @Injectable()
@@ -19,6 +20,7 @@ export class FlashcardService {
 
   constructor(
     private readonly flashcardRepository: FlashcardRepository,
+    private readonly analyticsService: AnalyticsService,
     @InjectQueue(FLASHCARD_GENERATION_QUEUE) private readonly generationQueue: Queue,
   ) {}
 
@@ -51,6 +53,7 @@ export class FlashcardService {
     });
 
     this.logger.log(`Flashcard set ${setId} queued for generation`);
+    this.analyticsService.recordActivity(studentId, 'flashcard').catch(() => {});
 
     return {
       setId: set.setId,

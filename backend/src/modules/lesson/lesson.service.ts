@@ -11,6 +11,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { LessonRepository } from './lesson.repository';
 import { LessonStatus } from './schemas/lesson.schema';
 import { GenerateLessonDto } from './dto/generate-lesson.dto';
+import { AnalyticsService } from '../analytics/analytics.service';
 import {
   LESSON_GENERATION_QUEUE,
   LessonGenerationJob,
@@ -22,6 +23,7 @@ export class LessonService {
 
   constructor(
     private readonly lessonRepository: LessonRepository,
+    private readonly analyticsService: AnalyticsService,
     @InjectQueue(LESSON_GENERATION_QUEUE) private readonly generationQueue: Queue,
   ) {}
 
@@ -53,6 +55,7 @@ export class LessonService {
     });
 
     this.logger.log(`Lesson ${lessonId} queued for generation`);
+    this.analyticsService.recordActivity(studentId, 'lesson').catch(() => {});
 
     return {
       lessonId: lesson.lessonId,
