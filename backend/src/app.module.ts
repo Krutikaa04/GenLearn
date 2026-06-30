@@ -5,6 +5,8 @@ import { ThrottlerModule } from '@nestjs/throttler';
 import { BullModule } from '@nestjs/bullmq';
 import { AuthModule } from './modules/auth/auth.module';
 import { DocumentModule } from './modules/document/document.module';
+import { LessonModule } from './modules/lesson/lesson.module';
+import { QuizModule } from './modules/quiz/quiz.module';
 import { HealthController } from './health/health.controller';
 
 @Module({
@@ -34,6 +36,8 @@ import { HealthController } from './health/health.controller';
     ThrottlerModule.forRoot([{ ttl: 60000, limit: 60 }]),
     AuthModule,
     DocumentModule,
+    LessonModule,
+    QuizModule,
   ],
   controllers: [HealthController],
   providers: [],

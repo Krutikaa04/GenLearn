@@ -16,6 +16,51 @@ export interface ProcessDocumentResult {
   pageCount: number | null;
 }
 
+export interface GenerateLessonPayload {
+  lessonId: string;
+  studentId: string;
+  topic: string;
+  difficulty: string;
+  documentIds: string[];
+}
+
+export interface LessonSection {
+  heading: string;
+  content: string;
+  keyPoints: string[];
+  codeExample: string | null;
+}
+
+export interface GenerateLessonResult {
+  title: string;
+  summary: string;
+  sections: LessonSection[];
+  keyTakeaways: string[];
+  estimatedReadMinutes: number;
+}
+
+export interface GenerateQuizPayload {
+  quizId: string;
+  studentId: string;
+  topic: string;
+  difficulty: string;
+  questionCount: number;
+  documentIds: string[];
+}
+
+export interface QuizQuestion {
+  questionId: string;
+  text: string;
+  options: string[];
+  correctIndex: number;
+  explanation: string;
+}
+
+export interface GenerateQuizResult {
+  title: string;
+  questions: QuizQuestion[];
+}
+
 export interface RagQueryPayload {
   question: string;
   studentId: string;
@@ -50,6 +95,14 @@ export class AiGatewayService {
 
   async processDocument(payload: ProcessDocumentPayload): Promise<ProcessDocumentResult> {
     return this.post<ProcessDocumentResult>('/ai/v1/documents/process', payload);
+  }
+
+  async generateLesson(payload: GenerateLessonPayload): Promise<GenerateLessonResult> {
+    return this.post<GenerateLessonResult>('/ai/v1/lessons/generate', payload);
+  }
+
+  async generateQuiz(payload: GenerateQuizPayload): Promise<GenerateQuizResult> {
+    return this.post<GenerateQuizResult>('/ai/v1/quizzes/generate', payload);
   }
 
   async ragQuery(payload: RagQueryPayload): Promise<RagQueryResult> {
