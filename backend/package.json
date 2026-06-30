@@ -20,7 +20,9 @@
     "test:e2e": "jest --config ./test/jest-e2e.json"
   },
   "dependencies": {
+    "@nestjs/axios": "^4.0.1",
     "@nestjs/bull": "^11.0.4",
+    "@nestjs/bullmq": "^11.0.4",
     "@nestjs/common": "^11.0.1",
     "@nestjs/config": "^4.0.4",
     "@nestjs/core": "^11.0.1",
@@ -30,6 +32,7 @@
     "@nestjs/platform-express": "^11.0.1",
     "@nestjs/swagger": "^11.4.4",
     "@nestjs/throttler": "^6.5.0",
+    "axios": "^1.18.1",
     "bcryptjs": "^3.0.3",
     "bullmq": "^5.79.2",
     "class-transformer": "^0.5.1",

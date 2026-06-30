@@ -25,6 +25,7 @@ services:
     volumes:
       - ./backend:/app
       - /app/node_modules
+      - uploads_data:/app/uploads
     env_file:
       - ./backend/.env
     depends_on:
@@ -47,6 +48,7 @@ services:
       - "8000:8000"
     volumes:
       - ./ai-service:/app
+      - uploads_data:/app/uploads
     env_file:
       - ./ai-service/.env
     depends_on:
@@ -88,6 +90,7 @@ services:
 volumes:
   mongodb_data:
   redis_data:
+  uploads_data:
 
 networks:
   default:

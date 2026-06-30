@@ -2,7 +2,9 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
 import { ThrottlerModule } from '@nestjs/throttler';
+import { BullModule } from '@nestjs/bullmq';
 import { AuthModule } from './modules/auth/auth.module';
+import { DocumentModule } from './modules/document/document.module';
 import { HealthController } from './health/health.controller';
 
 @Module({
@@ -15,8 +17,23 @@ import { HealthController } from './health/health.controller';
       }),
       inject: [ConfigService],
     }),
+    BullModule.forRootAsync({
+      imports: [ConfigModule],
+      useFactory: (configService: ConfigService) => {
+        const url = new URL(configService.get<string>('REDIS_URL', 'redis://localhost:6379'));
+        return {
+          connection: {
+            host: url.hostname,
+            port: parseInt(url.port || '6379', 10),
+            password: url.password || undefined,
+          },
+        };
+      },
+      inject: [ConfigService],
+    }),
     ThrottlerModule.forRoot([{ ttl: 60000, limit: 60 }]),
     AuthModule,
+    DocumentModule,
   ],
   controllers: [HealthController],
   providers: [],
