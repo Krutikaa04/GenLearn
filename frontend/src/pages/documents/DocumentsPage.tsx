@@ -1,7 +1,8 @@
 import { useState, useRef, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { FileText, Upload, Trash2, MessageSquare, Loader2, CloudUpload, X, Send } from 'lucide-react';
+import { FileText, Upload, Trash2, MessageSquare, Loader2, CloudUpload, X, Send, BookOpen, BrainCircuit, Layers } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useNavigate } from 'react-router-dom';
 import { documentsApi } from '../../api/documents.api';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
@@ -93,6 +94,7 @@ function AskModal({ docId, docName, onClose }: { docId: string; docName: string;
 }
 
 export function DocumentsPage() {
+  const navigate = useNavigate();
   const qc = useQueryClient();
   const fileRef = useRef<HTMLInputElement>(null);
   const [askDoc, setAskDoc] = useState<{ id: string; name: string } | null>(null);
@@ -187,14 +189,40 @@ export function DocumentsPage() {
               )}
               <div className="flex gap-1 shrink-0">
                 {doc.status === 'ready' && (
-                  <button
-                    onClick={() => setAskDoc({ id: doc.documentId, name: doc.originalFilename })}
-                    className="p-1.5 rounded-lg transition-colors hover:bg-[var(--brand-light)]"
-                    style={{ color: 'var(--text-muted)' }}
-                    title="Ask a question"
-                  >
-                    <MessageSquare className="w-4 h-4" />
-                  </button>
+                  <>
+                    <button
+                      onClick={() => navigate(`/lessons?docId=${doc.documentId}`)}
+                      className="p-1.5 rounded-lg transition-colors hover:bg-[var(--brand-light)]"
+                      style={{ color: 'var(--text-muted)' }}
+                      title="Generate lesson from this document"
+                    >
+                      <BookOpen className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => navigate(`/quizzes?docId=${doc.documentId}`)}
+                      className="p-1.5 rounded-lg transition-colors hover:bg-[var(--brand-light)]"
+                      style={{ color: 'var(--text-muted)' }}
+                      title="Generate quiz from this document"
+                    >
+                      <BrainCircuit className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => navigate(`/flashcards?docId=${doc.documentId}`)}
+                      className="p-1.5 rounded-lg transition-colors hover:bg-[var(--brand-light)]"
+                      style={{ color: 'var(--text-muted)' }}
+                      title="Generate flashcards from this document"
+                    >
+                      <Layers className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => setAskDoc({ id: doc.documentId, name: doc.originalFilename })}
+                      className="p-1.5 rounded-lg transition-colors hover:bg-[var(--brand-light)]"
+                      style={{ color: 'var(--text-muted)' }}
+                      title="Ask a question"
+                    >
+                      <MessageSquare className="w-4 h-4" />
+                    </button>
+                  </>
                 )}
                 <button
                   onClick={() => { if (confirm('Delete this document?')) deleteMutation.mutate(doc.documentId); }}

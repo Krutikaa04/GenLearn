@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Layers, Plus, Trash2, Loader2, RotateCcw, ChevronLeft, ChevronRight, X, Brain } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -11,10 +12,10 @@ import { Badge } from '../../components/ui/Badge';
 
 const statusColor: Record<string, any> = { pending: 'gray', generating: 'yellow', ready: 'green', failed: 'red' };
 
-function GenerateModal({ onClose }: { onClose: () => void }) {
+function GenerateModal({ onClose, initialDocId = '' }: { onClose: () => void; initialDocId?: string }) {
   const qc = useQueryClient();
-  const [sourceType, setSourceType] = useState<'document' | 'lesson'>('document');
-  const [sourceId, setSourceId] = useState('');
+  const [sourceType, setSourceType] = useState<'document' | 'lesson'>(initialDocId ? 'document' : 'document');
+  const [sourceId, setSourceId] = useState(initialDocId);
   const [count, setCount] = useState(15);
 
   const { data: docs = [] } = useQuery({
@@ -302,7 +303,9 @@ function DueCardsReview({ cards, onClose, onDone }: { cards: any[]; onClose: () 
 
 export function FlashcardsPage() {
   const qc = useQueryClient();
-  const [showModal, setShowModal] = useState(false);
+  const [searchParams] = useSearchParams();
+  const initialDocId = searchParams.get('docId') ?? '';
+  const [showModal, setShowModal] = useState(!!initialDocId);
   const [reviewId, setReviewId] = useState<string | null>(null);
   const [reviewingDue, setReviewingDue] = useState(false);
 
@@ -401,7 +404,7 @@ export function FlashcardsPage() {
         </div>
       )}
 
-      {showModal && <GenerateModal onClose={() => setShowModal(false)} />}
+      {showModal && <GenerateModal onClose={() => setShowModal(false)} initialDocId={initialDocId} />}
       {reviewId && <FlashcardReview setId={reviewId} onClose={() => setReviewId(null)} />}
       {reviewingDue && dueCards.length > 0 && (
         <DueCardsReview

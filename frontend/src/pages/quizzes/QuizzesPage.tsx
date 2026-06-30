@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { BrainCircuit, Plus, Trash2, Loader2, CheckCircle, XCircle, X, Trophy, Zap, AlertTriangle, ClipboardList } from 'lucide-react';
+import { BrainCircuit, Plus, Trash2, Loader2, CheckCircle, XCircle, X, Trophy, Zap, AlertTriangle, ClipboardList, FileText } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { quizzesApi } from '../../api/quizzes.api';
 import { analyticsApi } from '../../api/analytics.api';
+import { documentsApi } from '../../api/documents.api';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
@@ -12,7 +13,7 @@ import { Input } from '../../components/ui/Input';
 
 const statusColor: Record<string, any> = { pending: 'gray', generating: 'yellow', ready: 'green', failed: 'red' };
 
-function GenerateModal({ onClose, defaultTopic = '' }: { onClose: () => void; defaultTopic?: string }) {
+function GenerateModal({ onClose, defaultTopic = '', defaultDocId = '' }: { onClose: () => void; defaultTopic?: string; defaultDocId?: string }) {
   const qc = useQueryClient();
   const [mode, setMode] = useState<'normal' | 'challenge'>('normal');
   const [topic, setTopic] = useState(defaultTopic);
@@ -21,6 +22,13 @@ function GenerateModal({ onClose, defaultTopic = '' }: { onClose: () => void; de
   const [topicInput, setTopicInput] = useState('');
   const [challengeTopics, setChallengeTopics] = useState<string[]>(defaultTopic ? [defaultTopic] : []);
   const [timeLimit, setTimeLimit] = useState(15);
+  const [selectedDocIds, setSelectedDocIds] = useState<string[]>(defaultDocId ? [defaultDocId] : []);
+  const [docPanelOpen, setDocPanelOpen] = useState(!!defaultDocId);
+
+  const { data: docs = [] } = useQuery({
+    queryKey: ['documents'],
+    queryFn: () => documentsApi.list().then((r) => r.data.data.filter((d: any) => d.status === 'ready')),
+  });
 
   const mutation = useMutation({
     mutationFn: () => quizzesApi.generate({
@@ -30,6 +38,7 @@ function GenerateModal({ onClose, defaultTopic = '' }: { onClose: () => void; de
       challengeMode: mode === 'challenge',
       challengeTopics: mode === 'challenge' ? challengeTopics : undefined,
       timeLimitMinutes: mode === 'challenge' ? timeLimit : undefined,
+      documentIds: selectedDocIds.length > 0 ? selectedDocIds : undefined,
     }),
     onSuccess: () => { toast.success('Quiz generation started'); qc.invalidateQueries({ queryKey: ['quizzes'] }); onClose(); },
     onError: (err: any) => toast.error(err.response?.data?.error?.message || 'Failed'),
@@ -137,6 +146,37 @@ function GenerateModal({ onClose, defaultTopic = '' }: { onClose: () => void; de
             ))}
           </div>
         </div>
+
+        {docs.length > 0 && (
+          <div className="space-y-2">
+            <button
+              onClick={() => setDocPanelOpen(!docPanelOpen)}
+              className="flex items-center gap-1.5 text-xs font-medium transition-colors"
+              style={{ color: 'var(--brand)' }}
+            >
+              <FileText className="w-3.5 h-3.5" />
+              Ground on my documents ({selectedDocIds.length} selected)
+            </button>
+            {docPanelOpen && (
+              <div className="rounded-xl border p-3 space-y-1.5" style={{ borderColor: 'var(--border)', background: 'var(--bg-subtle)' }}>
+                {docs.map((doc: any) => (
+                  <label key={doc.documentId} className="flex items-center gap-2 cursor-pointer text-sm" style={{ color: 'var(--text-secondary)' }}>
+                    <input
+                      type="checkbox"
+                      checked={selectedDocIds.includes(doc.documentId)}
+                      onChange={(e) => setSelectedDocIds(e.target.checked
+                        ? [...selectedDocIds, doc.documentId]
+                        : selectedDocIds.filter((id) => id !== doc.documentId)
+                      )}
+                      className="rounded"
+                    />
+                    <span className="truncate">{doc.originalFilename}</span>
+                  </label>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         <div className="flex gap-2 pt-1">
           <Button variant="outline" onClick={onClose} className="flex-1">Cancel</Button>
@@ -504,7 +544,8 @@ export function QuizzesPage() {
   const qc = useQueryClient();
   const [searchParams] = useSearchParams();
   const defaultTopic = searchParams.get('topic') ?? '';
-  const [showModal, setShowModal] = useState(!!defaultTopic);
+  const defaultDocId = searchParams.get('docId') ?? '';
+  const [showModal, setShowModal] = useState(!!(defaultTopic || defaultDocId));
   const [takingId, setTakingId] = useState<string | null>(null);
   const [reviewId, setReviewId] = useState<string | null>(null);
 
@@ -591,7 +632,7 @@ export function QuizzesPage() {
         </div>
       )}
 
-      {showModal && <GenerateModal onClose={() => setShowModal(false)} defaultTopic={defaultTopic} />}
+      {showModal && <GenerateModal onClose={() => setShowModal(false)} defaultTopic={defaultTopic} defaultDocId={defaultDocId} />}
       {takingId && <QuizTaker quizId={takingId} onClose={() => { setTakingId(null); qc.invalidateQueries({ queryKey: ['quizzes'] }); }} />}
       {reviewId && <ReviewModal quizId={reviewId} onClose={() => setReviewId(null)} />}
     </div>

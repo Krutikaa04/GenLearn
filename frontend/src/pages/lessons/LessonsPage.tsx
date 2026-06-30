@@ -13,12 +13,12 @@ import { MarkdownContent } from '../../components/ui/MarkdownContent';
 
 const statusColor: Record<string, any> = { pending: 'gray', generating: 'yellow', ready: 'green', failed: 'red' };
 
-function GenerateModal({ onClose, defaultTopic = '' }: { onClose: () => void; defaultTopic?: string }) {
+function GenerateModal({ onClose, defaultTopic = '', defaultDocId = '' }: { onClose: () => void; defaultTopic?: string; defaultDocId?: string }) {
   const qc = useQueryClient();
   const [topic, setTopic] = useState(defaultTopic);
   const [difficulty, setDifficulty] = useState('beginner');
-  const [selectedDocIds, setSelectedDocIds] = useState<string[]>([]);
-  const [docPanelOpen, setDocPanelOpen] = useState(false);
+  const [selectedDocIds, setSelectedDocIds] = useState<string[]>(defaultDocId ? [defaultDocId] : []);
+  const [docPanelOpen, setDocPanelOpen] = useState(!!defaultDocId);
 
   const { data: docs = [] } = useQuery({
     queryKey: ['documents'],
@@ -190,7 +190,8 @@ export function LessonsPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const defaultTopic = searchParams.get('topic') ?? '';
-  const [showModal, setShowModal] = useState(!!defaultTopic);
+  const defaultDocId = searchParams.get('docId') ?? '';
+  const [showModal, setShowModal] = useState(!!(defaultTopic || defaultDocId));
   const [openId, setOpenId] = useState<string | null>(null);
 
   const { data: lessons = [], isLoading } = useQuery({
@@ -287,7 +288,7 @@ export function LessonsPage() {
         </div>
       )}
 
-      {showModal && <GenerateModal onClose={() => setShowModal(false)} defaultTopic={defaultTopic} />}
+      {showModal && <GenerateModal onClose={() => setShowModal(false)} defaultTopic={defaultTopic} defaultDocId={defaultDocId} />}
     </div>
   );
 }
