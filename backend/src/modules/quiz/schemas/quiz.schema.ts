@@ -66,7 +66,7 @@ export class Quiz {
   @Prop({ enum: QuizStatus, default: QuizStatus.PENDING })
   status: QuizStatus;
 
-  @Prop({ default: null })
+  @Prop({ type: String, default: null })
   title: string | null;
 
   @Prop({ type: [QuizQuestion], default: [] })
@@ -75,19 +75,19 @@ export class Quiz {
   @Prop({ type: [QuizAnswer], default: [] })
   answers: QuizAnswer[];
 
-  @Prop({ default: null })
+  @Prop({ type: Number, default: null })
   score: number | null;
 
-  @Prop({ default: null })
+  @Prop({ type: Number, default: null })
   totalQuestions: number | null;
 
-  @Prop({ default: null })
+  @Prop({ type: Date, default: null })
   submittedAt: Date | null;
 
-  @Prop({ default: null })
+  @Prop({ type: String, default: null })
   generationError: string | null;
 
-  @Prop({ default: null })
+  @Prop({ type: Date, default: null })
   deletedAt: Date | null;
 }
 

@@ -42,16 +42,16 @@ export class KnowledgeDocument {
   @Prop({ enum: DocumentStatus, default: DocumentStatus.UPLOADED })
   status: DocumentStatus;
 
-  @Prop({ default: null })
+  @Prop({ type: String, default: null })
   processingError: string | null;
 
-  @Prop({ default: null })
+  @Prop({ type: Number, default: null })
   pageCount: number | null;
 
   @Prop({ default: 0 })
   chunkCount: number;
 
-  @Prop({ default: null })
+  @Prop({ type: Date, default: null })
   deletedAt: Date | null;
 }
 

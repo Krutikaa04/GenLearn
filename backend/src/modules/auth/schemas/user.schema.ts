@@ -44,13 +44,13 @@ export class User {
   @Prop({ default: false })
   emailVerified: boolean;
 
-  @Prop({ default: null, select: false })
+  @Prop({ type: String, default: null, select: false })
   emailVerificationToken: string | null;
 
-  @Prop({ default: null, select: false })
+  @Prop({ type: String, default: null, select: false })
   passwordResetToken: string | null;
 
-  @Prop({ default: null, select: false })
+  @Prop({ type: Date, default: null, select: false })
   passwordResetExpiry: Date | null;
 
   @Prop({
@@ -66,7 +66,7 @@ export class User {
   })
   refreshTokens: RefreshTokenEntry[];
 
-  @Prop({ default: null })
+  @Prop({ type: Date, default: null })
   deletedAt: Date | null;
 }
 

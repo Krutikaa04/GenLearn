@@ -24,7 +24,7 @@ class LessonSection {
   @Prop({ type: [String], default: [] })
   keyPoints: string[];
 
-  @Prop({ default: null })
+  @Prop({ type: String, default: null })
   codeExample: string | null;
 }
 
@@ -48,10 +48,10 @@ export class Lesson {
   @Prop({ enum: LessonStatus, default: LessonStatus.PENDING })
   status: LessonStatus;
 
-  @Prop({ default: null })
+  @Prop({ type: String, default: null })
   title: string | null;
 
-  @Prop({ default: null })
+  @Prop({ type: String, default: null })
   summary: string | null;
 
   @Prop({ type: [LessonSection], default: [] })
@@ -60,13 +60,13 @@ export class Lesson {
   @Prop({ type: [String], default: [] })
   keyTakeaways: string[];
 
-  @Prop({ default: null })
+  @Prop({ type: Number, default: null })
   estimatedReadMinutes: number | null;
 
-  @Prop({ default: null })
+  @Prop({ type: String, default: null })
   generationError: string | null;
 
-  @Prop({ default: null })
+  @Prop({ type: Date, default: null })
   deletedAt: Date | null;
 }
 

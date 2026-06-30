@@ -19,10 +19,10 @@ export class DocumentChunk {
   @Prop({ type: [Number], default: [], select: false })
   embedding: number[];
 
-  @Prop({ default: null })
+  @Prop({ type: Number, default: null })
   pageNumber: number | null;
 
-  @Prop({ default: null })
+  @Prop({ type: String, default: null })
   heading: string | null;
 
   @Prop({ required: true })
