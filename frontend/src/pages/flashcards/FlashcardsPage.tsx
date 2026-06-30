@@ -54,7 +54,7 @@ function GenerateModal({ onClose }: { onClose: () => void }) {
             <label className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Select document</label>
             <select
               className="w-full rounded-xl px-3 py-2.5 text-sm ring-1 focus:ring-2 focus:ring-[var(--brand)] focus:outline-none"
-              style={{ background: 'var(--bg-surface)', color: 'var(--text-primary)', ringColor: 'var(--border)' }}
+              style={{ background: 'var(--bg-surface)', color: 'var(--text-primary)' }}
               value={sourceId} onChange={(e) => setSourceId(e.target.value)}
             >
               <option value="">Select a ready document…</option>
@@ -111,7 +111,6 @@ function FlashcardReview({ setId, onClose }: { setId: string; onClose: () => voi
   const [index, setIndex] = useState(0);
   const [flipped, setFlipped] = useState(false);
   const [reviewed, setReviewed] = useState<Set<number>>(new Set());
-  const [rating, setRating] = useState<Record<string, number>>({});
 
   if (isLoading) return (
     <div className="fixed inset-0 flex items-center justify-center z-50" style={{ background: 'rgba(0,0,0,0.6)' }}>
@@ -124,7 +123,6 @@ function FlashcardReview({ setId, onClose }: { setId: string; onClose: () => voi
   const progress = Math.round((reviewed.size / cards.length) * 100);
 
   const handleRate = async (r: number) => {
-    setRating((prev) => ({ ...prev, [card.cardId]: r }));
     setReviewed((s) => new Set([...s, index]));
     try {
       await flashcardsApi.reviewCard(setId, card.cardId, r);

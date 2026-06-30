@@ -335,7 +335,7 @@ export function TutorPage() {
             onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } }}
             placeholder="Ask your tutor anything…"
             className="flex-1 rounded-xl px-4 py-3 text-sm ring-1 focus:ring-2 focus:ring-[var(--brand)] focus:outline-none"
-            style={{ background: 'var(--bg-surface)', color: 'var(--text-primary)', ringColor: 'var(--border)' }}
+            style={{ background: 'var(--bg-surface)', color: 'var(--text-primary)' }}
             disabled={loading}
           />
           <Button onClick={() => send()} disabled={!message.trim() || loading} loading={loading}>

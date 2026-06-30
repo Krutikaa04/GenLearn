@@ -3,7 +3,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod/v4';
 import { Link, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { GraduationCap, Mail, Lock, Sparkles } from 'lucide-react';
+import { GraduationCap, Mail, Lock } from 'lucide-react';
 import { authApi } from '../../api/auth.api';
 import { useAuthStore } from '../../store/auth.store';
 import { Button } from '../../components/ui/Button';

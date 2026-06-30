@@ -81,7 +81,7 @@ function AskModal({ docId, docName, onClose }: { docId: string; docName: string;
             onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && ask()}
             placeholder="Ask a question…"
             className="flex-1 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand)] ring-1"
-            style={{ background: 'var(--bg-subtle)', color: 'var(--text-primary)', ringColor: 'var(--border)' }}
+            style={{ background: 'var(--bg-subtle)', color: 'var(--text-primary)' }}
           />
           <Button onClick={ask} loading={loading} disabled={!question.trim()} size="sm">
             <Send className="w-4 h-4" />

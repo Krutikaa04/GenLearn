@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
-import { CalendarDays, Plus, X, Loader2, BookOpen, BrainCircuit, Layers, FileText, Zap } from 'lucide-react';
+import { CalendarDays, Plus, X, BookOpen, BrainCircuit, Layers, FileText, Zap } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import { studyplanApi } from '../../api/studyplan.api';
@@ -152,7 +152,7 @@ export function StudyPlanPage() {
             value={targetDate}
             onChange={(e) => setTargetDate(e.target.value)}
             className="rounded-xl px-3 py-2.5 text-sm ring-1 focus:ring-2 focus:ring-[var(--brand)] focus:outline-none"
-            style={{ background: 'var(--bg-surface)', color: 'var(--text-primary)', ringColor: 'var(--border)' }}
+            style={{ background: 'var(--bg-surface)', color: 'var(--text-primary)' }}
           />
         </div>
 
