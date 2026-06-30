@@ -7,6 +7,7 @@ import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
 import { Input } from '../../components/ui/Input';
+import { MarkdownContent } from '../../components/ui/MarkdownContent';
 
 const statusColor: Record<string, any> = { pending: 'gray', generating: 'yellow', ready: 'green', failed: 'red' };
 
@@ -65,7 +66,9 @@ function LessonViewer({ lesson }: { lesson: any }) {
 
   return (
     <div className="space-y-4">
-      <p className="text-sm leading-relaxed" style={{ color: 'var(--text-secondary)' }}>{lesson.summary}</p>
+      <div style={{ color: 'var(--text-secondary)' }}>
+        <MarkdownContent content={lesson.summary ?? ''} className="text-sm" />
+      </div>
 
       <div className="space-y-2">
         {lesson.sections?.map((s: any, i: number) => (
@@ -82,7 +85,9 @@ function LessonViewer({ lesson }: { lesson: any }) {
             </button>
             {expanded === i && (
               <div className="px-4 pb-4 space-y-3" style={{ borderTop: '1px solid var(--border)' }}>
-                <p className="text-sm leading-relaxed pt-3" style={{ color: 'var(--text-secondary)' }}>{s.content}</p>
+                <div className="pt-3" style={{ color: 'var(--text-secondary)' }}>
+                  <MarkdownContent content={s.content ?? ''} className="text-sm" />
+                </div>
                 {s.keyPoints?.length > 0 && (
                   <ul className="space-y-1.5 pl-1">
                     {s.keyPoints.map((kp: string, j: number) => (
