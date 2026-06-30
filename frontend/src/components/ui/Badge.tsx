@@ -1,17 +1,26 @@
 interface BadgeProps {
   label: string;
-  color?: 'gray' | 'blue' | 'green' | 'yellow' | 'red' | 'violet';
+  color?: 'gray' | 'blue' | 'green' | 'yellow' | 'red' | 'purple';
+  size?: 'sm' | 'md';
 }
 
 const colors = {
-  gray: 'bg-gray-100 text-gray-700',
-  blue: 'bg-blue-100 text-blue-700',
-  green: 'bg-green-100 text-green-700',
-  yellow: 'bg-yellow-100 text-yellow-700',
-  red: 'bg-red-100 text-red-700',
-  violet: 'bg-violet-100 text-violet-700',
+  gray:   { bg: 'var(--bg-subtle)',       text: 'var(--text-secondary)', border: 'var(--border)' },
+  blue:   { bg: '#dbeafe',                text: '#1d4ed8',               border: '#bfdbfe' },
+  green:  { bg: 'var(--success-light)',   text: 'var(--success)',        border: 'transparent' },
+  yellow: { bg: 'var(--warning-light)',   text: 'var(--warning)',        border: 'transparent' },
+  red:    { bg: 'var(--danger-light)',    text: 'var(--danger)',         border: 'transparent' },
+  purple: { bg: 'var(--brand-light)',     text: 'var(--brand)',          border: 'transparent' },
 };
 
-export function Badge({ label, color = 'gray' }: BadgeProps) {
-  return <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${colors[color]}`}>{label}</span>;
+export function Badge({ label, color = 'gray', size = 'sm' }: BadgeProps) {
+  const c = colors[color];
+  return (
+    <span
+      className={`inline-flex items-center font-medium rounded-full border ${size === 'sm' ? 'px-2 py-0.5 text-xs' : 'px-2.5 py-1 text-xs'}`}
+      style={{ background: c.bg, color: c.text, borderColor: c.border }}
+    >
+      {label}
+    </span>
+  );
 }

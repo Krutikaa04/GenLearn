@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Layers, Plus, Trash2, Loader2, RotateCcw } from 'lucide-react';
+import { Layers, Plus, Trash2, Loader2, RotateCcw, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { flashcardsApi } from '../../api/flashcards.api';
 import { documentsApi } from '../../api/documents.api';
@@ -24,48 +24,71 @@ function GenerateModal({ onClose }: { onClose: () => void }) {
   const mutation = useMutation({
     mutationFn: () => flashcardsApi.generate({ sourceType, sourceId, count }),
     onSuccess: () => { toast.success('Flashcard generation started'); qc.invalidateQueries({ queryKey: ['flashcards'] }); onClose(); },
-    onError: (err: any) => toast.error(err.response?.data?.message || 'Failed'),
+    onError: (err: any) => toast.error(err.response?.data?.error?.message || 'Failed'),
   });
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-xl w-full max-w-md p-6 space-y-4">
-        <h3 className="font-semibold text-gray-900">Generate Flashcards</h3>
+    <div className="fixed inset-0 flex items-center justify-center p-4 z-50" style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}>
+      <div className="w-full max-w-md rounded-2xl border p-6 space-y-5" style={{ background: 'var(--bg-surface)', borderColor: 'var(--border)' }}>
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="font-semibold" style={{ color: 'var(--text-primary)' }}>Generate Flashcards</h3>
+            <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>Create cards from a document or lesson</p>
+          </div>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-[var(--bg-subtle)]" style={{ color: 'var(--text-muted)' }}><X className="w-4 h-4" /></button>
+        </div>
+
         <div className="flex gap-2">
           {(['document', 'lesson'] as const).map((t) => (
-            <button
-              key={t}
-              onClick={() => { setSourceType(t); setSourceId(''); }}
-              className={`flex-1 py-2 text-sm rounded-lg border transition-colors capitalize ${sourceType === t ? 'border-violet-400 bg-violet-50 text-violet-700' : 'border-gray-200 text-gray-600 hover:border-gray-300'}`}
-            >
-              {t}
-            </button>
+            <button key={t} onClick={() => { setSourceType(t); setSourceId(''); }}
+              className="flex-1 py-2.5 rounded-xl text-sm font-medium border transition-all capitalize"
+              style={sourceType === t
+                ? { background: 'var(--brand-light)', color: 'var(--brand)', borderColor: 'var(--brand)' }
+                : { background: 'var(--bg-subtle)', color: 'var(--text-secondary)', borderColor: 'var(--border)' }
+              }>{t}</button>
           ))}
         </div>
-        {sourceType === 'document' && (
-          <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium text-gray-700">Document</label>
-            <select className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500" value={sourceId} onChange={(e) => setSourceId(e.target.value)}>
-              <option value="">Select a document...</option>
+
+        {sourceType === 'document' ? (
+          <div className="flex flex-col gap-1.5">
+            <label className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Select document</label>
+            <select
+              className="w-full rounded-xl px-3 py-2.5 text-sm ring-1 focus:ring-2 focus:ring-[var(--brand)] focus:outline-none"
+              style={{ background: 'var(--bg-surface)', color: 'var(--text-primary)', ringColor: 'var(--border)' }}
+              value={sourceId} onChange={(e) => setSourceId(e.target.value)}
+            >
+              <option value="">Select a ready document…</option>
               {docs.map((d: any) => <option key={d.documentId} value={d.documentId}>{d.originalFilename}</option>)}
             </select>
           </div>
-        )}
-        {sourceType === 'lesson' && (
-          <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium text-gray-700">Lesson ID</label>
-            <input className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500" placeholder="Paste lesson ID" value={sourceId} onChange={(e) => setSourceId(e.target.value)} />
+        ) : (
+          <div className="flex flex-col gap-1.5">
+            <label className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Lesson ID</label>
+            <input
+              className="w-full rounded-xl px-3 py-2.5 text-sm ring-1 focus:ring-2 focus:ring-[var(--brand)] focus:outline-none"
+              style={{ background: 'var(--bg-surface)', color: 'var(--text-primary)' }}
+              placeholder="Paste lesson ID" value={sourceId} onChange={(e) => setSourceId(e.target.value)}
+            />
           </div>
         )}
-        <div className="flex flex-col gap-1">
-          <label className="text-sm font-medium text-gray-700">Card count</label>
-          <select className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500" value={count} onChange={(e) => setCount(Number(e.target.value))}>
-            {[10, 15, 20, 25].map((n) => <option key={n} value={n}>{n} cards</option>)}
-          </select>
+
+        <div className="flex flex-col gap-1.5">
+          <label className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Card count</label>
+          <div className="flex gap-2">
+            {[10, 15, 20, 25].map((n) => (
+              <button key={n} onClick={() => setCount(n)}
+                className="flex-1 py-2 rounded-xl text-sm font-medium border transition-all"
+                style={count === n
+                  ? { background: 'var(--brand-light)', color: 'var(--brand)', borderColor: 'var(--brand)' }
+                  : { background: 'var(--bg-subtle)', color: 'var(--text-secondary)', borderColor: 'var(--border)' }
+                }>{n}</button>
+            ))}
+          </div>
         </div>
-        <div className="flex gap-2 justify-end">
-          <Button variant="ghost" onClick={onClose}>Cancel</Button>
-          <Button onClick={() => mutation.mutate()} loading={mutation.isPending} disabled={!sourceId}>Generate</Button>
+
+        <div className="flex gap-2 pt-1">
+          <Button variant="outline" onClick={onClose} className="flex-1">Cancel</Button>
+          <Button onClick={() => mutation.mutate()} loading={mutation.isPending} disabled={!sourceId} className="flex-1">Generate</Button>
         </div>
       </div>
     </div>
@@ -80,34 +103,91 @@ function FlashcardReview({ setId, onClose }: { setId: string; onClose: () => voi
 
   const [index, setIndex] = useState(0);
   const [flipped, setFlipped] = useState(false);
+  const [known, setKnown] = useState<Set<number>>(new Set());
 
-  if (isLoading) return <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"><Loader2 className="w-8 h-8 animate-spin text-white" /></div>;
+  if (isLoading) return (
+    <div className="fixed inset-0 flex items-center justify-center z-50" style={{ background: 'rgba(0,0,0,0.6)' }}>
+      <Loader2 className="w-8 h-8 animate-spin text-white" />
+    </div>
+  );
 
   const cards = data?.cards ?? [];
   const card = cards[index];
+  const progress = Math.round((known.size / cards.length) * 100);
+
+  const markKnown = () => {
+    setKnown((k) => new Set([...k, index]));
+    if (index < cards.length - 1) { setIndex(index + 1); setFlipped(false); }
+  };
 
   return (
-    <div className="fixed inset-0 bg-black/60 flex flex-col items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-2xl w-full max-w-lg p-6 space-y-4">
+    <div className="fixed inset-0 z-50 flex flex-col items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(6px)' }}>
+      <div className="w-full max-w-lg space-y-4">
+        {/* Header */}
         <div className="flex items-center justify-between">
-          <span className="text-sm text-gray-500">{index + 1} / {cards.length}</span>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl">×</button>
+          <div className="flex items-center gap-3">
+            <span className="text-white/70 text-sm">{index + 1} / {cards.length}</span>
+            <div className="w-32 h-1.5 rounded-full bg-white/20">
+              <div className="h-1.5 rounded-full bg-white transition-all" style={{ width: `${progress}%` }} />
+            </div>
+            <span className="text-white/70 text-sm">{known.size} known</span>
+          </div>
+          <button onClick={onClose} className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-colors">
+            <X className="w-4 h-4" />
+          </button>
         </div>
+
+        {/* Card */}
         <div
-          className="min-h-48 border-2 border-gray-200 rounded-xl flex items-center justify-center p-6 cursor-pointer hover:border-violet-300 transition-colors text-center"
+          className="rounded-2xl border p-8 min-h-52 flex flex-col items-center justify-center text-center cursor-pointer transition-all duration-200 hover:scale-[1.01] select-none"
+          style={{ background: 'var(--bg-surface)', borderColor: 'var(--border)', boxShadow: 'var(--shadow-lg)' }}
           onClick={() => setFlipped(!flipped)}
         >
-          <div>
-            <p className="text-xs text-gray-400 mb-3 uppercase tracking-wide">{flipped ? 'Answer' : 'Question'}</p>
-            <p className="text-gray-900 font-medium">{flipped ? card?.back : card?.front}</p>
-            {!flipped && card?.hint && <p className="text-xs text-violet-500 mt-2">Hint: {card.hint}</p>}
-          </div>
+          <p className="text-xs font-bold uppercase tracking-widest mb-4" style={{ color: flipped ? 'var(--success)' : 'var(--brand)' }}>
+            {flipped ? 'Answer' : 'Question'}
+          </p>
+          <p className="text-lg font-semibold leading-snug" style={{ color: 'var(--text-primary)' }}>
+            {flipped ? card?.back : card?.front}
+          </p>
+          {!flipped && card?.hint && (
+            <p className="text-xs mt-4 px-3 py-1.5 rounded-full" style={{ background: 'var(--brand-light)', color: 'var(--brand)' }}>
+              💡 {card.hint}
+            </p>
+          )}
+          {!flipped && (
+            <p className="text-xs mt-4" style={{ color: 'var(--text-muted)' }}>Tap to reveal answer</p>
+          )}
         </div>
-        <p className="text-xs text-center text-gray-400">Click card to flip</p>
-        <div className="flex items-center gap-3">
-          <Button variant="secondary" onClick={() => { setIndex((i) => Math.max(0, i - 1)); setFlipped(false); }} disabled={index === 0} className="flex-1">Previous</Button>
-          <button onClick={() => { setFlipped(false); setIndex(index); }} className="p-2 text-gray-400 hover:text-gray-600"><RotateCcw className="w-4 h-4" /></button>
-          <Button onClick={() => { setIndex((i) => Math.min(cards.length - 1, i + 1)); setFlipped(false); }} disabled={index === cards.length - 1} className="flex-1">Next</Button>
+
+        {/* Controls */}
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => { setIndex((i) => Math.max(0, i - 1)); setFlipped(false); }}
+            disabled={index === 0}
+            className="p-3 rounded-xl border transition-all disabled:opacity-30"
+            style={{ background: 'var(--bg-surface)', borderColor: 'var(--border)', color: 'var(--text-secondary)' }}
+          ><ChevronLeft className="w-5 h-5" /></button>
+
+          <button
+            onClick={() => setFlipped(false)}
+            className="p-3 rounded-xl border transition-all"
+            style={{ background: 'var(--bg-surface)', borderColor: 'var(--border)', color: 'var(--text-secondary)' }}
+          ><RotateCcw className="w-4 h-4" /></button>
+
+          {flipped && (
+            <button
+              onClick={markKnown}
+              className="flex-1 py-3 rounded-xl text-sm font-semibold transition-all"
+              style={{ background: 'var(--success-light)', color: 'var(--success)' }}
+            >✓ Got it</button>
+          )}
+
+          <button
+            onClick={() => { setIndex((i) => Math.min(cards.length - 1, i + 1)); setFlipped(false); }}
+            disabled={index === cards.length - 1}
+            className="p-3 rounded-xl border transition-all disabled:opacity-30"
+            style={{ background: 'var(--bg-surface)', borderColor: 'var(--border)', color: 'var(--text-secondary)' }}
+          ><ChevronRight className="w-5 h-5" /></button>
         </div>
       </div>
     </div>
@@ -132,49 +212,54 @@ export function FlashcardsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-gray-900">Flashcards</h1>
-          <p className="text-gray-500 mt-1">Active recall practice from your documents and lessons</p>
+          <h1 className="text-2xl font-bold mb-1" style={{ color: 'var(--text-primary)' }}>Flashcards</h1>
+          <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Active recall practice from your content</p>
         </div>
         <Button onClick={() => setShowModal(true)}><Plus className="w-4 h-4" />Generate</Button>
       </div>
 
       {isLoading ? (
-        <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-gray-400" /></div>
+        <div className="flex justify-center py-16"><Loader2 className="w-6 h-6 animate-spin" style={{ color: 'var(--text-muted)' }} /></div>
       ) : sets.length === 0 ? (
-        <div className="text-center py-12">
-          <Layers className="w-10 h-10 text-gray-200 mx-auto mb-3" />
-          <p className="text-gray-400">No flashcard sets yet. Generate your first one!</p>
+        <div className="text-center py-16">
+          <Layers className="w-10 h-10 mx-auto mb-3" style={{ color: 'var(--border-strong)' }} />
+          <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>No flashcard sets yet</p>
+          <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>Generate cards from a document or lesson</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           {sets.map((set: any) => (
-            <Card key={set.setId} className="p-4 space-y-3">
+            <Card key={set.setId} padding="md" className="space-y-4">
               <div className="flex items-start justify-between gap-2">
-                <div>
-                  <p className="text-sm font-medium text-gray-900 capitalize">{set.sourceType} cards</p>
-                  <p className="text-xs text-gray-400 mt-0.5">{set.cardCount ?? '—'} cards</p>
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: 'var(--brand-light)' }}>
+                  <Layers className="w-5 h-5" style={{ color: 'var(--brand)' }} />
                 </div>
-                <div className="flex gap-1">
-                  <Badge label={set.status} color={statusColor[set.status]} />
-                </div>
+                <Badge label={set.status} color={statusColor[set.status]} />
+              </div>
+              <div>
+                <p className="text-sm font-semibold capitalize" style={{ color: 'var(--text-primary)' }}>
+                  From {set.sourceType}
+                </p>
+                <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
+                  {set.cardCount ?? '—'} cards
+                </p>
               </div>
               <div className="flex gap-2">
                 {set.status === 'ready' && (
-                  <Button size="sm" variant="secondary" onClick={() => setReviewId(set.setId)} className="flex-1">Review</Button>
+                  <Button size="sm" onClick={() => setReviewId(set.setId)} className="flex-1">Review cards</Button>
                 )}
                 {set.status === 'generating' && (
-                  <div className="flex items-center gap-1 text-xs text-gray-400 flex-1">
-                    <Loader2 className="w-3 h-3 animate-spin" />Generating...
+                  <div className="flex items-center gap-1.5 text-xs flex-1" style={{ color: 'var(--text-muted)' }}>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />Generating…
                   </div>
                 )}
                 <button
-                  onClick={() => { if (confirm('Delete set?')) deleteMutation.mutate(set.setId); }}
-                  className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
+                  onClick={() => { if (confirm('Delete this set?')) deleteMutation.mutate(set.setId); }}
+                  className="p-1.5 rounded-lg transition-colors hover:bg-[var(--danger-light)]"
+                  style={{ color: 'var(--text-muted)' }}
+                ><Trash2 className="w-4 h-4" /></button>
               </div>
             </Card>
           ))}

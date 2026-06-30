@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { BookOpen, Plus, Trash2, Clock, Loader2, ChevronDown, ChevronUp } from 'lucide-react';
+import { BookOpen, Plus, Trash2, Clock, Loader2, ChevronDown, ChevronRight, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { lessonsApi } from '../../api/lessons.api';
 import { Button } from '../../components/ui/Button';
@@ -18,73 +18,99 @@ function GenerateModal({ onClose }: { onClose: () => void }) {
   const mutation = useMutation({
     mutationFn: () => lessonsApi.generate({ topic, difficulty }),
     onSuccess: () => { toast.success('Lesson generation started'); qc.invalidateQueries({ queryKey: ['lessons'] }); onClose(); },
-    onError: (err: any) => toast.error(err.response?.data?.message || 'Failed'),
+    onError: (err: any) => toast.error(err.response?.data?.error?.message || 'Failed'),
   });
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-xl w-full max-w-md p-6 space-y-4">
-        <h3 className="font-semibold text-gray-900">Generate Lesson</h3>
-        <Input label="Topic" placeholder="e.g. Binary Search Trees" value={topic} onChange={(e) => setTopic(e.target.value)} />
-        <div className="flex flex-col gap-1">
-          <label className="text-sm font-medium text-gray-700">Difficulty</label>
-          <select className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500" value={difficulty} onChange={(e) => setDifficulty(e.target.value)}>
-            <option value="beginner">Beginner</option>
-            <option value="intermediate">Intermediate</option>
-            <option value="advanced">Advanced</option>
-          </select>
+    <div className="fixed inset-0 flex items-center justify-center p-4 z-50" style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}>
+      <div className="w-full max-w-md rounded-2xl border p-6 space-y-5" style={{ background: 'var(--bg-surface)', borderColor: 'var(--border)' }}>
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="font-semibold" style={{ color: 'var(--text-primary)' }}>Generate Lesson</h3>
+            <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>AI will create a structured lesson on any topic</p>
+          </div>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-[var(--bg-subtle)]" style={{ color: 'var(--text-muted)' }}><X className="w-4 h-4" /></button>
         </div>
-        <div className="flex gap-2 justify-end">
-          <Button variant="ghost" onClick={onClose}>Cancel</Button>
-          <Button onClick={() => mutation.mutate()} loading={mutation.isPending} disabled={!topic.trim()}>Generate</Button>
+
+        <Input label="Topic" placeholder="e.g. Binary Search Trees, Photosynthesis…" value={topic} onChange={(e) => setTopic(e.target.value)} />
+
+        <div className="flex flex-col gap-1.5">
+          <label className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Difficulty</label>
+          <div className="grid grid-cols-3 gap-2">
+            {['beginner', 'intermediate', 'advanced'].map((d) => (
+              <button
+                key={d}
+                onClick={() => setDifficulty(d)}
+                className="py-2 rounded-xl text-sm font-medium border transition-all capitalize"
+                style={difficulty === d
+                  ? { background: 'var(--brand-light)', color: 'var(--brand)', borderColor: 'var(--brand)' }
+                  : { background: 'var(--bg-subtle)', color: 'var(--text-secondary)', borderColor: 'var(--border)' }
+                }
+              >{d}</button>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex gap-2 pt-1">
+          <Button variant="outline" onClick={onClose} className="flex-1">Cancel</Button>
+          <Button onClick={() => mutation.mutate()} loading={mutation.isPending} disabled={!topic.trim()} className="flex-1">Generate</Button>
         </div>
       </div>
     </div>
   );
 }
 
-function LessonDetail({ lesson }: { lesson: any }) {
-  const [expanded, setExpanded] = useState<number | null>(null);
+function LessonViewer({ lesson }: { lesson: any }) {
+  const [expanded, setExpanded] = useState<number | null>(0);
 
   return (
     <div className="space-y-4">
-      <p className="text-gray-600">{lesson.summary}</p>
+      <p className="text-sm leading-relaxed" style={{ color: 'var(--text-secondary)' }}>{lesson.summary}</p>
+
       <div className="space-y-2">
         {lesson.sections?.map((s: any, i: number) => (
-          <div key={i} className="border border-gray-200 rounded-lg overflow-hidden">
+          <div key={i} className="rounded-xl border overflow-hidden" style={{ borderColor: 'var(--border)' }}>
             <button
-              className="w-full flex items-center justify-between p-4 text-left hover:bg-gray-50 transition-colors"
+              className="w-full flex items-center justify-between px-4 py-3 text-left transition-colors hover:bg-[var(--bg-subtle)]"
               onClick={() => setExpanded(expanded === i ? null : i)}
             >
-              <span className="font-medium text-gray-900 text-sm">{s.heading}</span>
-              {expanded === i ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
+              <span className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{s.heading}</span>
+              {expanded === i
+                ? <ChevronDown className="w-4 h-4 shrink-0" style={{ color: 'var(--text-muted)' }} />
+                : <ChevronRight className="w-4 h-4 shrink-0" style={{ color: 'var(--text-muted)' }} />
+              }
             </button>
             {expanded === i && (
-              <div className="px-4 pb-4 space-y-3">
-                <p className="text-sm text-gray-600 leading-relaxed">{s.content}</p>
+              <div className="px-4 pb-4 space-y-3" style={{ borderTop: '1px solid var(--border)' }}>
+                <p className="text-sm leading-relaxed pt-3" style={{ color: 'var(--text-secondary)' }}>{s.content}</p>
                 {s.keyPoints?.length > 0 && (
-                  <ul className="space-y-1">
+                  <ul className="space-y-1.5 pl-1">
                     {s.keyPoints.map((kp: string, j: number) => (
-                      <li key={j} className="flex gap-2 text-sm text-gray-700">
-                        <span className="text-violet-500 mt-0.5">•</span>{kp}
+                      <li key={j} className="flex gap-2 text-sm" style={{ color: 'var(--text-secondary)' }}>
+                        <span className="mt-0.5 shrink-0" style={{ color: 'var(--brand)' }}>•</span>{kp}
                       </li>
                     ))}
                   </ul>
                 )}
                 {s.codeExample && (
-                  <pre className="bg-gray-900 text-gray-100 rounded-lg p-4 text-xs overflow-auto">{s.codeExample}</pre>
+                  <pre className="rounded-xl p-4 text-xs overflow-auto leading-relaxed" style={{ background: 'var(--bg-subtle)', color: 'var(--text-primary)', fontFamily: 'ui-monospace, monospace' }}>
+                    {s.codeExample}
+                  </pre>
                 )}
               </div>
             )}
           </div>
         ))}
       </div>
+
       {lesson.keyTakeaways?.length > 0 && (
-        <div className="bg-violet-50 rounded-xl p-4">
-          <p className="text-sm font-semibold text-violet-800 mb-2">Key Takeaways</p>
-          <ul className="space-y-1">
+        <div className="rounded-xl p-4 space-y-2" style={{ background: 'var(--brand-light)' }}>
+          <p className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--brand)' }}>Key Takeaways</p>
+          <ul className="space-y-1.5">
             {lesson.keyTakeaways.map((t: string, i: number) => (
-              <li key={i} className="text-sm text-violet-700 flex gap-2"><span>✓</span>{t}</li>
+              <li key={i} className="flex gap-2 text-sm" style={{ color: 'var(--brand)' }}>
+                <span className="shrink-0">✓</span>{t}
+              </li>
             ))}
           </ul>
         </div>
@@ -109,58 +135,69 @@ export function LessonsPage() {
     onSuccess: () => { toast.success('Deleted'); qc.invalidateQueries({ queryKey: ['lessons'] }); },
   });
 
-  const openLesson = async (lesson: any) => {
-    if (openId === lesson.lessonId) { setOpenId(null); return; }
-    if (lesson.status !== 'ready') { toast.error('Lesson is not ready yet'); return; }
-    setOpenId(lesson.lessonId);
-  };
-
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-gray-900">Lessons</h1>
-          <p className="text-gray-500 mt-1">AI-generated lessons on any topic</p>
+          <h1 className="text-2xl font-bold mb-1" style={{ color: 'var(--text-primary)' }}>Lessons</h1>
+          <p className="text-sm" style={{ color: 'var(--text-muted)' }}>AI-generated lessons on any topic, any level</p>
         </div>
         <Button onClick={() => setShowModal(true)}><Plus className="w-4 h-4" />Generate</Button>
       </div>
 
       {isLoading ? (
-        <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-gray-400" /></div>
+        <div className="flex justify-center py-16"><Loader2 className="w-6 h-6 animate-spin" style={{ color: 'var(--text-muted)' }} /></div>
       ) : lessons.length === 0 ? (
-        <div className="text-center py-12">
-          <BookOpen className="w-10 h-10 text-gray-200 mx-auto mb-3" />
-          <p className="text-gray-400">No lessons yet. Generate your first one!</p>
+        <div className="text-center py-16">
+          <BookOpen className="w-10 h-10 mx-auto mb-3" style={{ color: 'var(--border-strong)' }} />
+          <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>No lessons yet</p>
+          <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>Generate your first lesson to begin</p>
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-2">
           {lessons.map((lesson: any) => (
             <Card key={lesson.lessonId} className="overflow-hidden">
-              <div className="p-4 flex items-start gap-3 cursor-pointer hover:bg-gray-50 transition-colors" onClick={() => openLesson(lesson)}>
-                <BookOpen className="w-5 h-5 text-gray-400 mt-0.5 shrink-0" />
+              <div
+                className="flex items-start gap-3 p-4 cursor-pointer hover:bg-[var(--bg-subtle)] transition-colors"
+                onClick={() => {
+                  if (lesson.status !== 'ready') return toast.error('Lesson is still generating');
+                  setOpenId(openId === lesson.lessonId ? null : lesson.lessonId);
+                }}
+              >
+                <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={{ background: 'var(--brand-light)' }}>
+                  <BookOpen className="w-4 h-4" style={{ color: 'var(--brand)' }} />
+                </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-900">{lesson.title || lesson.topic}</p>
-                  <div className="flex items-center gap-2 mt-1">
-                    <Badge label={lesson.difficulty} color="violet" />
+                  <p className="text-sm font-semibold truncate" style={{ color: 'var(--text-primary)' }}>
+                    {lesson.title || lesson.topic}
+                  </p>
+                  <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                    <Badge label={lesson.difficulty} color="purple" />
                     <Badge label={lesson.status} color={statusColor[lesson.status]} />
                     {lesson.estimatedReadMinutes && (
-                      <span className="flex items-center gap-1 text-xs text-gray-400">
+                      <span className="flex items-center gap-1 text-xs" style={{ color: 'var(--text-muted)' }}>
                         <Clock className="w-3 h-3" />{lesson.estimatedReadMinutes} min
                       </span>
                     )}
                   </div>
                 </div>
-                {lesson.status === 'generating' && <Loader2 className="w-4 h-4 animate-spin text-violet-400 shrink-0" />}
+                {lesson.status === 'generating' && <Loader2 className="w-4 h-4 animate-spin shrink-0 mt-1" style={{ color: 'var(--brand)' }} />}
+                {lesson.status === 'ready' && (
+                  openId === lesson.lessonId
+                    ? <ChevronDown className="w-4 h-4 shrink-0 mt-1" style={{ color: 'var(--text-muted)' }} />
+                    : <ChevronRight className="w-4 h-4 shrink-0 mt-1" style={{ color: 'var(--text-muted)' }} />
+                )}
                 <button
-                  onClick={(e) => { e.stopPropagation(); if (confirm('Delete lesson?')) deleteMutation.mutate(lesson.lessonId); }}
-                  className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors shrink-0"
+                  onClick={(e) => { e.stopPropagation(); if (confirm('Delete this lesson?')) deleteMutation.mutate(lesson.lessonId); }}
+                  className="p-1.5 rounded-lg shrink-0 transition-colors hover:bg-[var(--danger-light)]"
+                  style={{ color: 'var(--text-muted)' }}
                 >
                   <Trash2 className="w-4 h-4" />
                 </button>
               </div>
               {openId === lesson.lessonId && lesson.sections && (
-                <div className="border-t border-gray-100 p-4">
-                  <LessonDetail lesson={lesson} />
+                <div className="p-4 border-t" style={{ borderColor: 'var(--border)' }}>
+                  <LessonViewer lesson={lesson} />
                 </div>
               )}
             </Card>
