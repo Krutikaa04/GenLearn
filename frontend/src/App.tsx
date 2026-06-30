@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'react-hot-toast';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { useAuthStore } from './store/auth.store';
 import { AppLayout } from './components/layout/AppLayout';
 import { LoginPage } from './pages/auth/LoginPage';
@@ -27,6 +28,7 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
 
 export default function App() {
   return (
+    <ErrorBoundary>
     <QueryClientProvider client={qc}>
       <BrowserRouter>
         <Routes>
@@ -47,5 +49,6 @@ export default function App() {
       </BrowserRouter>
       <Toaster position="top-right" />
     </QueryClientProvider>
+    </ErrorBoundary>
   );
 }
