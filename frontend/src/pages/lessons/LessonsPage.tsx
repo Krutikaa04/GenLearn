@@ -168,6 +168,23 @@ function LessonViewer({ lesson }: { lesson: any }) {
   );
 }
 
+function LessonExpander({ lessonId }: { lessonId: string }) {
+  const { data, isLoading } = useQuery({
+    queryKey: ['lesson', lessonId],
+    queryFn: () => lessonsApi.getById(lessonId).then((r) => r.data.data),
+    staleTime: 5 * 60_000,
+  });
+
+  if (isLoading) return (
+    <div className="flex items-center gap-2 py-6 justify-center" style={{ color: 'var(--text-muted)' }}>
+      <Loader2 className="w-4 h-4 animate-spin" />
+      <span className="text-sm">Loading lesson…</span>
+    </div>
+  );
+  if (!data) return null;
+  return <LessonViewer lesson={data} />;
+}
+
 export function LessonsPage() {
   const qc = useQueryClient();
   const [searchParams] = useSearchParams();
@@ -246,9 +263,9 @@ export function LessonsPage() {
                   <Trash2 className="w-4 h-4" />
                 </button>
               </div>
-              {openId === lesson.lessonId && lesson.sections && (
+              {openId === lesson.lessonId && (
                 <div className="p-4 border-t" style={{ borderColor: 'var(--border)' }}>
-                  <LessonViewer lesson={lesson} />
+                  <LessonExpander lessonId={lesson.lessonId} />
                 </div>
               )}
             </Card>
