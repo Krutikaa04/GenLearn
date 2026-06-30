@@ -6,6 +6,7 @@ import { conversationApi } from '../../api/conversation.api';
 import { documentsApi } from '../../api/documents.api';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
+import { MarkdownContent } from '../../components/ui/MarkdownContent';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -294,7 +295,10 @@ export function TutorPage() {
                   : { background: 'var(--bg-surface)', color: 'var(--text-primary)', border: '1px solid var(--border)', borderBottomLeftRadius: '4px' }
                 }
               >
-                {msg.content}
+                {msg.role === 'user'
+                  ? msg.content
+                  : <MarkdownContent content={msg.content} />
+                }
               </div>
               {msg.role === 'assistant' && msg.suggestions && msg.suggestions.length > 0 && i === messages.length - 1 && (
                 <div className="flex flex-wrap gap-1.5 pt-1">
