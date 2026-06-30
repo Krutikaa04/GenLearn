@@ -236,6 +236,7 @@ function QuizTaker({ quizId, onClose }: { quizId: string; onClose: () => void })
   useEffect(() => {
     if (timeLeft === null || result) return;
     if (timeLeft === 0) {
+      toast('Time\'s up! Submitting…', { icon: '⏱' });
       submitRef.current();
       return;
     }
@@ -439,6 +440,17 @@ export function QuizzesPage() {
                   {quiz.challengeMode && <Badge label="Challenge" color="yellow" />}
                   {quiz.timeLimitMinutes && <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{quiz.timeLimitMinutes}min limit</span>}
                   {quiz.questionCount && <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{quiz.questionCount}q</span>}
+                  {quiz.status === 'submitted' && quiz.score != null && quiz.questionCount && (
+                    <span
+                      className="text-xs font-bold px-2 py-0.5 rounded-full"
+                      style={{
+                        background: quiz.score / quiz.questionCount >= 0.7 ? 'var(--success-light)' : 'var(--warning-light)',
+                        color: quiz.score / quiz.questionCount >= 0.7 ? 'var(--success)' : 'var(--warning)',
+                      }}
+                    >
+                      {Math.round((quiz.score / quiz.questionCount) * 100)}%
+                    </span>
+                  )}
                 </div>
               </div>
               {quiz.status === 'generating' && <Loader2 className="w-4 h-4 animate-spin shrink-0" style={{ color: 'var(--brand)' }} />}
