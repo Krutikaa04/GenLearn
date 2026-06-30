@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Layers, Plus, Trash2, Loader2, RotateCcw, ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { Layers, Plus, Trash2, Loader2, RotateCcw, ChevronLeft, ChevronRight, X, Brain } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { flashcardsApi } from '../../api/flashcards.api';
 import { documentsApi } from '../../api/documents.api';
@@ -210,10 +210,92 @@ function FlashcardReview({ setId, onClose }: { setId: string; onClose: () => voi
   );
 }
 
+function DueCardsReview({ cards, onClose, onDone }: { cards: any[]; onClose: () => void; onDone: () => void }) {
+  const [index, setIndex] = useState(0);
+  const [flipped, setFlipped] = useState(false);
+  const [reviewed, setReviewed] = useState<Set<number>>(new Set());
+
+  const card = cards[index];
+  const progress = Math.round((reviewed.size / cards.length) * 100);
+  const allDone = reviewed.size === cards.length;
+
+  const handleRate = async (r: number) => {
+    setReviewed((s) => new Set([...s, index]));
+    try {
+      await flashcardsApi.reviewCard(card.setId, card.cardId, r);
+    } catch { /* best-effort */ }
+    if (index < cards.length - 1) { setIndex(index + 1); setFlipped(false); }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex flex-col items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(6px)' }}>
+      <div className="w-full max-w-lg space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <span className="text-white/70 text-sm">{Math.min(index + 1, cards.length)} / {cards.length}</span>
+            <div className="w-32 h-1.5 rounded-full bg-white/20">
+              <div className="h-1.5 rounded-full bg-white transition-all" style={{ width: `${progress}%` }} />
+            </div>
+          </div>
+          <button onClick={onClose} className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {allDone ? (
+          <div className="rounded-2xl border p-10 flex flex-col items-center gap-4 text-center" style={{ background: 'var(--bg-surface)', borderColor: 'var(--border)' }}>
+            <div className="text-4xl">🎉</div>
+            <p className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>All done for today!</p>
+            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>You reviewed {cards.length} card{cards.length !== 1 ? 's' : ''}. See you next time.</p>
+            <Button onClick={onDone} className="mt-2">Back to sets</Button>
+          </div>
+        ) : (
+          <>
+            <div
+              className="rounded-2xl border p-8 min-h-52 flex flex-col items-center justify-center text-center cursor-pointer transition-all hover:scale-[1.01] select-none"
+              style={{ background: 'var(--bg-surface)', borderColor: 'var(--border)', boxShadow: 'var(--shadow-lg)' }}
+              onClick={() => setFlipped(!flipped)}
+            >
+              <p className="text-xs font-bold uppercase tracking-widest mb-1" style={{ color: 'var(--text-muted)' }}>{card?.setTitle}</p>
+              <p className="text-xs font-bold uppercase tracking-widest mb-4" style={{ color: flipped ? 'var(--success)' : 'var(--brand)' }}>
+                {flipped ? 'Answer' : 'Question'}
+              </p>
+              <p className="text-lg font-semibold leading-snug" style={{ color: 'var(--text-primary)' }}>
+                {flipped ? card?.back : card?.front}
+              </p>
+              {!flipped && card?.hint && (
+                <p className="text-xs mt-4 px-3 py-1.5 rounded-full" style={{ background: 'var(--brand-light)', color: 'var(--brand)' }}>💡 {card.hint}</p>
+              )}
+              {!flipped && <p className="text-xs mt-4" style={{ color: 'var(--text-muted)' }}>Tap to reveal answer</p>}
+            </div>
+
+            {flipped ? (
+              <div className="grid grid-cols-4 gap-2">
+                {SRS_RATINGS.map(({ label, value, style }) => (
+                  <button key={label} onClick={() => handleRate(value)} className="py-2.5 rounded-xl text-sm font-semibold transition-all hover:opacity-90" style={style}>{label}</button>
+                ))}
+              </div>
+            ) : (
+              <p className="text-center text-xs" style={{ color: 'rgba(255,255,255,0.5)' }}>Rate your recall after flipping</p>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export function FlashcardsPage() {
   const qc = useQueryClient();
   const [showModal, setShowModal] = useState(false);
   const [reviewId, setReviewId] = useState<string | null>(null);
+  const [reviewingDue, setReviewingDue] = useState(false);
+
+  const { data: dueCards = [] } = useQuery({
+    queryKey: ['flashcards-due'],
+    queryFn: () => flashcardsApi.getDue().then((r) => r.data.data),
+    refetchInterval: 60_000,
+  });
 
   const { data: sets = [], isLoading } = useQuery({
     queryKey: ['flashcards'],
@@ -235,6 +317,28 @@ export function FlashcardsPage() {
         </div>
         <Button onClick={() => setShowModal(true)}><Plus className="w-4 h-4" />Generate</Button>
       </div>
+
+      {dueCards.length > 0 && (
+        <div
+          className="flex items-center justify-between rounded-2xl border px-4 py-3.5"
+          style={{ background: 'var(--brand-light)', borderColor: 'var(--brand)' }}
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: 'var(--brand)' }}>
+              <Brain className="w-4 h-4 text-white" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold" style={{ color: 'var(--brand)' }}>
+                {dueCards.length} card{dueCards.length !== 1 ? 's' : ''} due for review
+              </p>
+              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Your spaced-repetition queue for today</p>
+            </div>
+          </div>
+          <Button size="sm" onClick={() => setReviewingDue(true)}>
+            Start review
+          </Button>
+        </div>
+      )}
 
       {isLoading ? (
         <div className="flex justify-center py-16"><Loader2 className="w-6 h-6 animate-spin" style={{ color: 'var(--text-muted)' }} /></div>
@@ -284,6 +388,13 @@ export function FlashcardsPage() {
 
       {showModal && <GenerateModal onClose={() => setShowModal(false)} />}
       {reviewId && <FlashcardReview setId={reviewId} onClose={() => setReviewId(null)} />}
+      {reviewingDue && dueCards.length > 0 && (
+        <DueCardsReview
+          cards={dueCards}
+          onClose={() => setReviewingDue(false)}
+          onDone={() => { setReviewingDue(false); qc.invalidateQueries({ queryKey: ['flashcards-due'] }); }}
+        />
+      )}
     </div>
   );
 }
