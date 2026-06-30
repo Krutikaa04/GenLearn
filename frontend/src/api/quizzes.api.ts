@@ -16,4 +16,5 @@ export const quizzesApi = {
   submit: (id: string, answers: { questionId: string; selectedIndex: number }[]) =>
     api.post(`/quizzes/${id}/submit`, { answers }),
   delete: (id: string) => api.delete(`/quizzes/${id}`),
+  reviewQuiz: (id: string) => api.get(`/quizzes/${id}/review`),
 };

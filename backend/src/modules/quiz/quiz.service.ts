@@ -170,6 +170,45 @@ export class QuizService {
     return result;
   }
 
+  async review(quizId: string, studentId: string) {
+    const quiz = await this.findAndCheckOwnership(quizId, studentId);
+    if (quiz.status !== QuizStatus.SUBMITTED) {
+      throw new UnprocessableEntityException({
+        code: 'QUIZ_NOT_SUBMITTED',
+        message: 'Quiz has not been submitted yet',
+      });
+    }
+
+    const quizWithAnswers = await this.quizRepository.findByIdWithAnswers(quizId);
+    if (!quizWithAnswers) {
+      throw new NotFoundException({ code: 'QUIZ_NOT_FOUND', message: 'Quiz not found' });
+    }
+
+    const questionMap = new Map(
+      quizWithAnswers.questions.map((q: any) => [q.questionId, q]),
+    );
+
+    return {
+      quizId,
+      score: quiz.score,
+      totalQuestions: quiz.questionCount,
+      scorePercent: Math.round(((quiz.score ?? 0) / quiz.questionCount) * 100),
+      submittedAt: quiz.submittedAt,
+      answers: (quiz.answers as any[]).map((a) => {
+        const q = questionMap.get(a.questionId) as any;
+        return {
+          questionId: a.questionId,
+          questionText: q?.text ?? '',
+          selectedIndex: a.selectedIndex,
+          isCorrect: a.isCorrect,
+          correctIndex: q?.correctIndex,
+          explanation: q?.explanation ?? '',
+          options: q?.options ?? [],
+        };
+      }),
+    };
+  }
+
   async delete(quizId: string, studentId: string): Promise<void> {
     await this.findAndCheckOwnership(quizId, studentId);
     await this.quizRepository.softDelete(quizId);

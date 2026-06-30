@@ -50,6 +50,13 @@ export class QuizController {
     return { data: result };
   }
 
+  @Get(':id/review')
+  @ApiOperation({ summary: 'Get the full answer breakdown for a submitted quiz' })
+  async review(@CurrentUser() user: JwtPayload, @Param('id') id: string) {
+    const result = await this.quizService.review(id, user.userId);
+    return { data: result };
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Get quiz questions (without answers)' })
   async findOne(@CurrentUser() user: JwtPayload, @Param('id') id: string) {

@@ -209,6 +209,66 @@ describe('QuizService', () => {
     });
   });
 
+  // ─── review ───────────────────────────────────────────────────────────────────
+
+  describe('review', () => {
+    const submittedQuiz = () =>
+      makeQuiz({
+        status: QuizStatus.SUBMITTED,
+        score: 1,
+        submittedAt: new Date('2026-01-01'),
+        answers: [
+          { questionId: 'q1', selectedIndex: 0, isCorrect: true },
+          { questionId: 'q2', selectedIndex: 1, isCorrect: false },
+        ],
+      });
+
+    it('returns enriched answer breakdown for a submitted quiz', async () => {
+      repository.findById.mockResolvedValue(submittedQuiz());
+      repository.findByIdWithAnswers.mockResolvedValue(makeQuizWithAnswers({ status: QuizStatus.SUBMITTED }));
+
+      const result = await service.review('quiz-1', 'student-1');
+
+      expect(result.score).toBe(1);
+      expect(result.totalQuestions).toBe(2);
+      expect(result.scorePercent).toBe(50);
+      expect(result.answers).toHaveLength(2);
+    });
+
+    it('populates questionText, correctIndex, explanation and options from the question map', async () => {
+      repository.findById.mockResolvedValue(submittedQuiz());
+      repository.findByIdWithAnswers.mockResolvedValue(makeQuizWithAnswers({ status: QuizStatus.SUBMITTED }));
+
+      const result = await service.review('quiz-1', 'student-1');
+
+      expect(result.answers[0].questionText).toBe('What is base case?');
+      expect(result.answers[0].correctIndex).toBe(0);
+      expect(result.answers[0].options).toEqual(['A', 'B', 'C', 'D']);
+      expect(result.answers[1].explanation).toBe('Y is correct');
+    });
+
+    it('throws UnprocessableEntityException when quiz is not yet submitted', async () => {
+      repository.findById.mockResolvedValue(makeQuiz({ status: QuizStatus.READY }));
+
+      await expect(service.review('quiz-1', 'student-1')).rejects.toThrow(UnprocessableEntityException);
+    });
+
+    it('throws ForbiddenException when reviewing another student\'s quiz', async () => {
+      repository.findById.mockResolvedValue(submittedQuiz());
+      // Simulate ownership mismatch via findAndCheckOwnership
+      repository.findById.mockResolvedValue(makeQuiz({ studentId: 'other-student', status: QuizStatus.SUBMITTED }));
+
+      await expect(service.review('quiz-1', 'student-1')).rejects.toThrow('Access denied');
+    });
+
+    it('throws NotFoundException when quiz-with-answers record is missing', async () => {
+      repository.findById.mockResolvedValue(submittedQuiz());
+      repository.findByIdWithAnswers.mockResolvedValue(null);
+
+      await expect(service.review('quiz-1', 'student-1')).rejects.toThrow(NotFoundException);
+    });
+  });
+
   // ─── delete ───────────────────────────────────────────────────────────────────
 
   describe('delete', () => {

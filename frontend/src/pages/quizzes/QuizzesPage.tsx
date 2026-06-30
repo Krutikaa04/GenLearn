@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { BrainCircuit, Plus, Trash2, Loader2, CheckCircle, XCircle, X, Trophy, Zap, AlertTriangle } from 'lucide-react';
+import { BrainCircuit, Plus, Trash2, Loader2, CheckCircle, XCircle, X, Trophy, Zap, AlertTriangle, ClipboardList } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { quizzesApi } from '../../api/quizzes.api';
@@ -188,6 +188,76 @@ function WeakTopicsPanel({ topic }: { topic: string }) {
           </div>
         </div>
       ))}
+    </div>
+  );
+}
+
+function ReviewModal({ quizId, onClose }: { quizId: string; onClose: () => void }) {
+  const { data, isLoading } = useQuery({
+    queryKey: ['quiz-review', quizId],
+    queryFn: () => quizzesApi.reviewQuiz(quizId).then((r) => r.data.data),
+  });
+
+  return (
+    <div className="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}>
+      <div className="w-full max-w-xl rounded-2xl border" style={{ background: 'var(--bg-surface)', borderColor: 'var(--border)' }}>
+        <div className="flex items-center justify-between p-5 border-b" style={{ borderColor: 'var(--border)' }}>
+          <div>
+            <h3 className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>Quiz Results</h3>
+            {data && <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>{data.score} of {data.totalQuestions} correct</p>}
+          </div>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-[var(--bg-subtle)]" style={{ color: 'var(--text-muted)' }}><X className="w-4 h-4" /></button>
+        </div>
+
+        <div className="p-6 space-y-5">
+          {isLoading ? (
+            <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin" style={{ color: 'var(--text-muted)' }} /></div>
+          ) : data ? (
+            <>
+              <div className="text-center py-2">
+                <div className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-3"
+                  style={{ background: data.scorePercent >= 70 ? 'var(--success-light)' : 'var(--warning-light)' }}>
+                  <Trophy className="w-7 h-7" style={{ color: data.scorePercent >= 70 ? 'var(--success)' : 'var(--warning)' }} />
+                </div>
+                <p className="text-4xl font-bold" style={{ color: 'var(--text-primary)' }}>{data.scorePercent}%</p>
+                <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>{data.score} of {data.totalQuestions} correct</p>
+              </div>
+
+              <div className="space-y-2 max-h-80 overflow-y-auto">
+                {(data.answers ?? []).map((r: any, i: number) => (
+                  <div key={i} className="rounded-xl p-3 border flex gap-2" style={{
+                    background: r.isCorrect ? 'var(--success-light)' : 'var(--danger-light)',
+                    borderColor: r.isCorrect ? 'var(--success)' : 'var(--danger)',
+                  }}>
+                    {r.isCorrect
+                      ? <CheckCircle className="w-4 h-4 shrink-0 mt-0.5" style={{ color: 'var(--success)' }} />
+                      : <XCircle className="w-4 h-4 shrink-0 mt-0.5" style={{ color: 'var(--danger)' }} />
+                    }
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{r.questionText}</p>
+                      <p className="text-xs mt-0.5" style={{ color: 'var(--text-secondary)' }}>
+                        Your answer: {r.options?.[r.selectedIndex] ?? '—'}
+                      </p>
+                      {!r.isCorrect && r.correctIndex !== undefined && r.options?.[r.correctIndex] && (
+                        <p className="text-xs mt-0.5 font-medium" style={{ color: 'var(--success)' }}>
+                          ✓ {r.options[r.correctIndex]}
+                        </p>
+                      )}
+                      {!r.isCorrect && r.explanation && (
+                        <p className="text-xs mt-1" style={{ color: 'var(--text-secondary)' }}>{r.explanation}</p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          ) : (
+            <p className="text-center text-sm py-4" style={{ color: 'var(--text-muted)' }}>Failed to load results</p>
+          )}
+
+          <Button onClick={onClose} className="w-full">Close</Button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -391,6 +461,7 @@ export function QuizzesPage() {
   const defaultTopic = searchParams.get('topic') ?? '';
   const [showModal, setShowModal] = useState(!!defaultTopic);
   const [takingId, setTakingId] = useState<string | null>(null);
+  const [reviewId, setReviewId] = useState<string | null>(null);
 
   const { data: quizzes = [], isLoading } = useQuery({
     queryKey: ['quizzes'],
@@ -460,6 +531,11 @@ export function QuizzesPage() {
                   {quiz.challengeMode ? <><Zap className="w-3.5 h-3.5" /> Challenge</> : 'Take Quiz'}
                 </Button>
               )}
+              {quiz.status === 'submitted' && (
+                <Button size="sm" variant="outline" onClick={() => setReviewId(quiz.quizId)}>
+                  <ClipboardList className="w-3.5 h-3.5" /> Results
+                </Button>
+              )}
               <button
                 onClick={() => { if (confirm('Delete this quiz?')) deleteMutation.mutate(quiz.quizId); }}
                 className="p-1.5 rounded-lg shrink-0 transition-colors hover:bg-[var(--danger-light)]"
@@ -472,6 +548,7 @@ export function QuizzesPage() {
 
       {showModal && <GenerateModal onClose={() => setShowModal(false)} defaultTopic={defaultTopic} />}
       {takingId && <QuizTaker quizId={takingId} onClose={() => { setTakingId(null); qc.invalidateQueries({ queryKey: ['quizzes'] }); }} />}
+      {reviewId && <ReviewModal quizId={reviewId} onClose={() => setReviewId(null)} />}
     </div>
   );
 }
