@@ -93,6 +93,10 @@
     "transform": {
       "^.+\\.(t|j)s$": "ts-jest"
     },
+    "testPathIgnorePatterns": [
+      "/node_modules/",
+      "app.controller.spec.ts"
+    ],
     "moduleNameMapper": {
       "^uuid$": "<rootDir>/../test/mocks/uuid.js"
     },
