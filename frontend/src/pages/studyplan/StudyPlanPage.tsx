@@ -98,7 +98,7 @@ export function StudyPlanPage() {
                   return (
                     <button
                       key={i}
-                      onClick={() => navigate(taskRoute[task.type] ?? '/dashboard')}
+                      onClick={() => navigate(`${taskRoute[task.type] ?? '/dashboard'}?topic=${encodeURIComponent(task.topic)}`)}
                       className="w-full flex items-center gap-3 p-3 rounded-xl border text-left transition-all hover:bg-[var(--bg-subtle)]"
                       style={{ borderColor: 'var(--border)', background: 'var(--bg-surface)' }}
                     >

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { BookOpen, Plus, Trash2, Clock, Loader2, ChevronDown, ChevronRight, X } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -11,9 +12,9 @@ import { MarkdownContent } from '../../components/ui/MarkdownContent';
 
 const statusColor: Record<string, any> = { pending: 'gray', generating: 'yellow', ready: 'green', failed: 'red' };
 
-function GenerateModal({ onClose }: { onClose: () => void }) {
+function GenerateModal({ onClose, defaultTopic = '' }: { onClose: () => void; defaultTopic?: string }) {
   const qc = useQueryClient();
-  const [topic, setTopic] = useState('');
+  const [topic, setTopic] = useState(defaultTopic);
   const [difficulty, setDifficulty] = useState('beginner');
 
   const mutation = useMutation({
@@ -126,7 +127,9 @@ function LessonViewer({ lesson }: { lesson: any }) {
 
 export function LessonsPage() {
   const qc = useQueryClient();
-  const [showModal, setShowModal] = useState(false);
+  const [searchParams] = useSearchParams();
+  const defaultTopic = searchParams.get('topic') ?? '';
+  const [showModal, setShowModal] = useState(!!defaultTopic);
   const [openId, setOpenId] = useState<string | null>(null);
 
   const { data: lessons = [], isLoading } = useQuery({
@@ -210,7 +213,7 @@ export function LessonsPage() {
         </div>
       )}
 
-      {showModal && <GenerateModal onClose={() => setShowModal(false)} />}
+      {showModal && <GenerateModal onClose={() => setShowModal(false)} defaultTopic={defaultTopic} />}
     </div>
   );
 }
