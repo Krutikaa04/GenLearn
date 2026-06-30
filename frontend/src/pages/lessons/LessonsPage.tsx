@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { BookOpen, Plus, Trash2, Clock, Loader2, ChevronDown, ChevronRight, X, FileText } from 'lucide-react';
+import { BookOpen, Plus, Trash2, Clock, Loader2, ChevronDown, ChevronRight, X, FileText, BrainCircuit } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { lessonsApi } from '../../api/lessons.api';
 import { documentsApi } from '../../api/documents.api';
@@ -187,6 +187,7 @@ function LessonExpander({ lessonId }: { lessonId: string }) {
 
 export function LessonsPage() {
   const qc = useQueryClient();
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const defaultTopic = searchParams.get('topic') ?? '';
   const [showModal, setShowModal] = useState(!!defaultTopic);
@@ -254,6 +255,19 @@ export function LessonsPage() {
                   openId === lesson.lessonId
                     ? <ChevronDown className="w-4 h-4 shrink-0 mt-1" style={{ color: 'var(--text-muted)' }} />
                     : <ChevronRight className="w-4 h-4 shrink-0 mt-1" style={{ color: 'var(--text-muted)' }} />
+                )}
+                {lesson.status === 'ready' && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigate(`/quizzes?topic=${encodeURIComponent(lesson.topic)}`);
+                    }}
+                    title="Generate a quiz on this topic"
+                    className="p-1.5 rounded-lg shrink-0 transition-colors hover:bg-[var(--brand-light)]"
+                    style={{ color: 'var(--text-muted)' }}
+                  >
+                    <BrainCircuit className="w-4 h-4" />
+                  </button>
                 )}
                 <button
                   onClick={(e) => { e.stopPropagation(); if (confirm('Delete this lesson?')) deleteMutation.mutate(lesson.lessonId); }}

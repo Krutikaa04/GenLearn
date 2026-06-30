@@ -314,6 +314,48 @@ function QuizTaker({ quizId, onClose }: { quizId: string; onClose: () => void })
     return () => clearInterval(id);
   }, [timeLeft, result]);
 
+  // Keyboard navigation: 1–4 to select, →/Enter to advance, ←/p to go back
+  useEffect(() => {
+    if (result) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement).tagName)) return;
+      const qs = quiz?.questions ?? [];
+      const qCurrent = qs[current];
+      if (!qCurrent) return;
+
+      const optionKeys: Record<string, number> = { '1': 0, '2': 1, '3': 2, '4': 3 };
+      if (e.key in optionKeys) {
+        const idx = optionKeys[e.key];
+        if (idx < (qCurrent.options?.length ?? 0)) {
+          // In challenge mode, don't allow re-selecting once answered
+          if (!isChallenge || answers[qCurrent.questionId] === undefined) {
+            setAnswers((a) => ({ ...a, [qCurrent.questionId]: idx }));
+          }
+        }
+        return;
+      }
+
+      const isAnswered = answers[qCurrent.questionId] !== undefined;
+      const isLast = current === qs.length - 1;
+
+      if ((e.key === 'ArrowRight' || e.key === 'Enter' || e.key === ' ') && isAnswered) {
+        e.preventDefault();
+        if (isLast) {
+          if (Object.keys(answers).length === qs.length) submitRef.current();
+        } else {
+          setCurrent((c) => c + 1);
+        }
+      }
+
+      if ((e.key === 'ArrowLeft' || e.key === 'Backspace') && !isChallenge && current > 0) {
+        e.preventDefault();
+        setCurrent((c) => c - 1);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [result, current, answers, isChallenge, quiz?.questions]);
+
   if (isLoading) return (
     <div className="fixed inset-0 flex items-center justify-center z-50" style={{ background: 'rgba(0,0,0,0.6)' }}>
       <Loader2 className="w-8 h-8 animate-spin text-white" />
@@ -448,6 +490,9 @@ function QuizTaker({ quizId, onClose }: { quizId: string; onClose: () => void })
                   >Submit Quiz</Button>
               }
             </div>
+            <p className="text-center text-xs" style={{ color: 'var(--text-muted)' }}>
+              Press <kbd className="px-1 py-0.5 rounded text-xs font-mono" style={{ background: 'var(--bg-subtle)', border: '1px solid var(--border)' }}>1</kbd>–<kbd className="px-1 py-0.5 rounded text-xs font-mono" style={{ background: 'var(--bg-subtle)', border: '1px solid var(--border)' }}>4</kbd> to select · <kbd className="px-1 py-0.5 rounded text-xs font-mono" style={{ background: 'var(--bg-subtle)', border: '1px solid var(--border)' }}>→</kbd> or <kbd className="px-1 py-0.5 rounded text-xs font-mono" style={{ background: 'var(--bg-subtle)', border: '1px solid var(--border)' }}>Enter</kbd> to advance
+            </p>
           </div>
         )}
       </div>
