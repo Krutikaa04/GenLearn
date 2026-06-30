@@ -359,11 +359,11 @@ export function FlashcardsPage() {
                 <Badge label={set.status} color={statusColor[set.status]} />
               </div>
               <div>
-                <p className="text-sm font-semibold capitalize" style={{ color: 'var(--text-primary)' }}>
-                  From {set.sourceType}
+                <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
+                  {set.title || `Flashcards from ${set.sourceType}`}
                 </p>
                 <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
-                  {set.cardCount ?? '—'} cards
+                  {set.cardCount ?? '—'} cards · from {set.sourceType}
                 </p>
               </div>
               <div className="flex gap-2">
