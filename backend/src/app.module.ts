@@ -7,6 +7,9 @@ import { AuthModule } from './modules/auth/auth.module';
 import { DocumentModule } from './modules/document/document.module';
 import { LessonModule } from './modules/lesson/lesson.module';
 import { QuizModule } from './modules/quiz/quiz.module';
+import { FlashcardModule } from './modules/flashcard/flashcard.module';
+import { AnalyticsModule } from './modules/analytics/analytics.module';
+import { AdminModule } from './modules/admin/admin.module';
 import { HealthController } from './health/health.controller';
 
 @Module({
@@ -38,6 +41,9 @@ import { HealthController } from './health/health.controller';
     DocumentModule,
     LessonModule,
     QuizModule,
+    FlashcardModule,
+    AnalyticsModule,
+    AdminModule,
   ],
   controllers: [HealthController],
   providers: [],

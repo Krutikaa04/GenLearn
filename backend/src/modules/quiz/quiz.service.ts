@@ -14,6 +14,7 @@ import { QuizStatus } from './schemas/quiz.schema';
 import { GenerateQuizDto } from './dto/generate-quiz.dto';
 import { SubmitQuizDto } from './dto/submit-quiz.dto';
 import { QUIZ_GENERATION_QUEUE, QuizGenerationJob } from './workers/quiz-generator.processor';
+import { AnalyticsService } from '../analytics/analytics.service';
 
 @Injectable()
 export class QuizService {
@@ -21,6 +22,7 @@ export class QuizService {
 
   constructor(
     private readonly quizRepository: QuizRepository,
+    private readonly analyticsService: AnalyticsService,
     @InjectQueue(QUIZ_GENERATION_QUEUE) private readonly generationQueue: Queue,
   ) {}
 
@@ -148,6 +150,11 @@ export class QuizService {
     };
 
     this.logger.log(`Quiz ${quizId} submitted: ${correctCount}/${quizWithAnswers.questions.length}`);
+
+    // Fire-and-forget — don't fail the submission if analytics update fails
+    this.analyticsService
+      .recordQuizResult(studentId, quiz.topic, scorePercent)
+      .catch((err) => this.logger.warn(`Analytics update failed for quiz ${quizId}: ${(err as Error).message}`));
 
     return result;
   }

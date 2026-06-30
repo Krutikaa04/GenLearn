@@ -61,6 +61,25 @@ export interface GenerateQuizResult {
   questions: QuizQuestion[];
 }
 
+export interface GenerateFlashcardsPayload {
+  setId: string;
+  studentId: string;
+  sourceType: string;
+  sourceId: string;
+  count: number;
+}
+
+export interface FlashcardItem {
+  cardId: string;
+  front: string;
+  back: string;
+  hint: string | null;
+}
+
+export interface GenerateFlashcardsResult {
+  cards: FlashcardItem[];
+}
+
 export interface RagQueryPayload {
   question: string;
   studentId: string;
@@ -103,6 +122,10 @@ export class AiGatewayService {
 
   async generateQuiz(payload: GenerateQuizPayload): Promise<GenerateQuizResult> {
     return this.post<GenerateQuizResult>('/ai/v1/quizzes/generate', payload);
+  }
+
+  async generateFlashcards(payload: GenerateFlashcardsPayload): Promise<GenerateFlashcardsResult> {
+    return this.post<GenerateFlashcardsResult>('/ai/v1/flashcards/generate', payload);
   }
 
   async ragQuery(payload: RagQueryPayload): Promise<RagQueryResult> {
