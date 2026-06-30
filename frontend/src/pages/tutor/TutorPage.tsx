@@ -1,8 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { BotMessageSquare, Send, Loader2, FileText, ChevronDown } from 'lucide-react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { BotMessageSquare, Send, Loader2, FileText, ChevronDown, History, Trash2, X, Plus } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { tutorApi, type ConversationMessage } from '../../api/tutor.api';
+import { conversationApi } from '../../api/conversation.api';
 import { documentsApi } from '../../api/documents.api';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
@@ -14,18 +14,27 @@ interface Message {
 }
 
 export function TutorPage() {
+  const qc = useQueryClient();
   const [topic, setTopic] = useState('');
   const [topicConfirmed, setTopicConfirmed] = useState(false);
+  const [conversationId, setConversationId] = useState<string | undefined>(undefined);
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedDocIds, setSelectedDocIds] = useState<string[]>([]);
   const [docPanelOpen, setDocPanelOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   const { data: docs = [] } = useQuery({
     queryKey: ['documents'],
     queryFn: () => documentsApi.list().then((r) => r.data.data.filter((d: any) => d.status === 'ready')),
+  });
+
+  const { data: history = [] } = useQuery({
+    queryKey: ['conversations'],
+    queryFn: () => conversationApi.list().then((r) => r.data.data.items),
+    enabled: historyOpen,
   });
 
   useEffect(() => {
@@ -34,6 +43,7 @@ export function TutorPage() {
 
   const startSession = () => {
     if (!topic.trim()) return;
+    setConversationId(undefined);
     setTopicConfirmed(true);
     setMessages([{
       role: 'assistant',
@@ -46,6 +56,42 @@ export function TutorPage() {
     }]);
   };
 
+  const resumeConversation = async (id: string) => {
+    try {
+      const res = await conversationApi.getById(id);
+      const conv = res.data.data;
+      setConversationId(conv.conversationId);
+      setTopic(conv.topic);
+      setSelectedDocIds(conv.documentIds ?? []);
+      setMessages(
+        conv.messages.map((m: any) => ({
+          role: m.role,
+          content: m.content,
+          suggestions: m.followUpSuggestions,
+        })),
+      );
+      setTopicConfirmed(true);
+      setHistoryOpen(false);
+    } catch {
+      toast.error('Could not load conversation');
+    }
+  };
+
+  const deleteConversation = async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      await conversationApi.delete(id);
+      qc.invalidateQueries({ queryKey: ['conversations'] });
+      if (id === conversationId) {
+        setTopicConfirmed(false);
+        setConversationId(undefined);
+        setMessages([]);
+      }
+    } catch {
+      toast.error('Could not delete conversation');
+    }
+  };
+
   const send = async (text?: string) => {
     const msg = (text ?? message).trim();
     if (!msg || loading) return;
@@ -55,20 +101,17 @@ export function TutorPage() {
     setMessages((m) => [...m, userMsg]);
     setLoading(true);
 
-    const history: ConversationMessage[] = messages.map((m) => ({
-      role: m.role === 'user' ? 'user' : 'assistant',
-      content: m.content,
-    }));
-
     try {
-      const res = await tutorApi.chat({
+      const res = await conversationApi.sendMessage({
+        conversationId,
         topic,
         message: msg,
-        conversationHistory: history,
         documentIds: selectedDocIds.length > 0 ? selectedDocIds : undefined,
       });
-      const { reply, followUpSuggestions } = res.data.data;
+      const { conversationId: newId, reply, followUpSuggestions } = res.data.data;
+      setConversationId(newId);
       setMessages((m) => [...m, { role: 'assistant', content: reply, suggestions: followUpSuggestions }]);
+      qc.invalidateQueries({ queryKey: ['conversations'] });
     } catch (err: any) {
       toast.error(err.response?.data?.error?.message || 'Tutor is unavailable');
       setMessages((m) => m.slice(0, -1));
@@ -77,9 +120,68 @@ export function TutorPage() {
     }
   };
 
+  const HistoryPanel = () => (
+    <div className="fixed inset-0 z-50 flex justify-end" style={{ background: 'rgba(0,0,0,0.4)' }} onClick={() => setHistoryOpen(false)}>
+      <div
+        className="w-80 h-full border-l p-4 overflow-y-auto"
+        style={{ background: 'var(--bg-surface)', borderColor: 'var(--border)' }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>Past conversations</h3>
+          <button onClick={() => setHistoryOpen(false)} className="p-1 rounded-lg hover:bg-[var(--bg-subtle)]" style={{ color: 'var(--text-muted)' }}>
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+        <button
+          onClick={() => { setTopicConfirmed(false); setConversationId(undefined); setMessages([]); setTopic(''); setHistoryOpen(false); }}
+          className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium mb-3 transition-colors hover:bg-[var(--bg-subtle)]"
+          style={{ border: '1px dashed var(--border-strong)', color: 'var(--text-secondary)' }}
+        >
+          <Plus className="w-4 h-4" /> New conversation
+        </button>
+        {history.length === 0 ? (
+          <p className="text-xs text-center mt-8" style={{ color: 'var(--text-muted)' }}>No conversations yet</p>
+        ) : (
+          <div className="space-y-1">
+            {history.map((c: any) => (
+              <button
+                key={c.conversationId}
+                onClick={() => resumeConversation(c.conversationId)}
+                className="w-full flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl text-left transition-colors hover:bg-[var(--bg-subtle)] group"
+                style={c.conversationId === conversationId ? { background: 'var(--brand-light)' } : undefined}
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium truncate" style={{ color: 'var(--text-primary)' }}>{c.topic}</p>
+                  <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{new Date(c.updatedAt).toLocaleDateString()}</p>
+                </div>
+                <button
+                  onClick={(e) => deleteConversation(c.conversationId, e)}
+                  className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg hover:bg-[var(--danger-light)] shrink-0"
+                  style={{ color: 'var(--text-muted)' }}
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
   if (!topicConfirmed) {
     return (
       <div className="max-w-lg mx-auto mt-16 space-y-6">
+        <div className="flex justify-end">
+          <button
+            onClick={() => setHistoryOpen(true)}
+            className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border transition-colors hover:bg-[var(--bg-subtle)]"
+            style={{ color: 'var(--text-muted)', borderColor: 'var(--border)' }}
+          >
+            <History className="w-3.5 h-3.5" /> History
+          </button>
+        </div>
         <div className="text-center space-y-2">
           <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto"
             style={{ background: 'var(--brand-light)' }}>
@@ -136,6 +238,8 @@ export function TutorPage() {
             Start learning
           </Button>
         </div>
+
+        {historyOpen && <HistoryPanel />}
       </div>
     );
   }
@@ -155,13 +259,22 @@ export function TutorPage() {
             </p>
           </div>
         </div>
-        <button
-          onClick={() => { setTopicConfirmed(false); setMessages([]); setTopic(''); }}
-          className="text-xs px-3 py-1.5 rounded-lg border transition-colors hover:bg-[var(--bg-subtle)]"
-          style={{ color: 'var(--text-muted)', borderColor: 'var(--border)' }}
-        >
-          New topic
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setHistoryOpen(true)}
+            className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border transition-colors hover:bg-[var(--bg-subtle)]"
+            style={{ color: 'var(--text-muted)', borderColor: 'var(--border)' }}
+          >
+            <History className="w-3.5 h-3.5" /> History
+          </button>
+          <button
+            onClick={() => { setTopicConfirmed(false); setConversationId(undefined); setMessages([]); setTopic(''); }}
+            className="text-xs px-3 py-1.5 rounded-lg border transition-colors hover:bg-[var(--bg-subtle)]"
+            style={{ color: 'var(--text-muted)', borderColor: 'var(--border)' }}
+          >
+            New topic
+          </button>
+        </div>
       </div>
 
       {/* Messages */}
@@ -230,6 +343,8 @@ export function TutorPage() {
           </Button>
         </div>
       </div>
+
+      {historyOpen && <HistoryPanel />}
     </div>
   );
 }
