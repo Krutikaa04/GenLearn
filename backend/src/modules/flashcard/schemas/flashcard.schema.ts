@@ -25,6 +25,19 @@ class FlashcardItem {
 
   @Prop({ type: String, default: null })
   hint: string | null;
+
+  // SM-2 spaced repetition fields
+  @Prop({ type: Number, default: 2.5 })
+  easeFactor: number;
+
+  @Prop({ type: Number, default: 0 })
+  interval: number;
+
+  @Prop({ type: Number, default: 0 })
+  repetitions: number;
+
+  @Prop({ type: Date, default: null })
+  nextReviewAt: Date | null;
 }
 
 @Schema({ timestamps: true, collection: 'flashcard_sets' })

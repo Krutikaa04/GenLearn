@@ -1,10 +1,12 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, FileText, BookOpen, BrainCircuit,
-  Layers, LogOut, GraduationCap, ChevronRight,
+  Layers, LogOut, GraduationCap, ChevronRight, BotMessageSquare, CalendarDays,
 } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 import { useAuthStore } from '../../store/auth.store';
 import { authApi } from '../../api/auth.api';
+import { flashcardsApi } from '../../api/flashcards.api';
 import { ThemeToggle } from '../ui/ThemeToggle';
 
 const nav = [
@@ -15,9 +17,20 @@ const nav = [
   { to: '/flashcards', icon: Layers, label: 'Flashcards' },
 ];
 
+const aiNav = [
+  { to: '/tutor', icon: BotMessageSquare, label: 'AI Tutor' },
+  { to: '/study-plan', icon: CalendarDays, label: 'Study Plan' },
+];
+
 export function AppLayout() {
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
+
+  const { data: dueCards = [] } = useQuery({
+    queryKey: ['flashcards-due'],
+    queryFn: () => flashcardsApi.getDue().then((r) => r.data.data),
+    refetchInterval: 60_000,
+  });
 
   const handleLogout = async () => {
     try { await authApi.logout(); } catch {}
@@ -51,7 +64,7 @@ export function AppLayout() {
         {/* Nav */}
         <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto">
           <p className="px-3 pt-2 pb-1.5 text-xs font-semibold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
-            Menu
+            Learn
           </p>
           {nav.map(({ to, icon: Icon, label }) => (
             <NavLink
@@ -59,9 +72,43 @@ export function AppLayout() {
               to={to}
               className={({ isActive }) =>
                 `group flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 ${
-                  isActive
-                    ? 'shadow-sm'
-                    : 'hover:bg-[var(--bg-subtle)]'
+                  isActive ? 'shadow-sm' : 'hover:bg-[var(--bg-subtle)]'
+                }`
+              }
+              style={({ isActive }) => isActive
+                ? { background: 'var(--brand-light)', color: 'var(--brand)' }
+                : { color: 'var(--text-secondary)' }
+              }
+            >
+              {({ isActive }) => (
+                <>
+                  <div className="flex items-center gap-3">
+                    <Icon className="w-4 h-4 shrink-0" />
+                    {label}
+                  </div>
+                  <div className="flex items-center gap-1">
+                    {to === '/flashcards' && dueCards.length > 0 && (
+                      <span className="text-xs font-bold px-1.5 py-0.5 rounded-full" style={{ background: 'var(--brand)', color: '#fff', fontSize: '10px' }}>
+                        {dueCards.length}
+                      </span>
+                    )}
+                    {isActive && <ChevronRight className="w-3.5 h-3.5 opacity-60" />}
+                  </div>
+                </>
+              )}
+            </NavLink>
+          ))}
+
+          <p className="px-3 pt-4 pb-1.5 text-xs font-semibold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
+            AI Tools
+          </p>
+          {aiNav.map(({ to, icon: Icon, label }) => (
+            <NavLink
+              key={to}
+              to={to}
+              className={({ isActive }) =>
+                `group flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 ${
+                  isActive ? 'shadow-sm' : 'hover:bg-[var(--bg-subtle)]'
                 }`
               }
               style={({ isActive }) => isActive

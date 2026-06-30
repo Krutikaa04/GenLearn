@@ -95,6 +95,13 @@ function GenerateModal({ onClose }: { onClose: () => void }) {
   );
 }
 
+const SRS_RATINGS = [
+  { label: 'Again', value: 0, style: { background: 'var(--danger-light)', color: 'var(--danger)' } },
+  { label: 'Hard', value: 1, style: { background: 'var(--warning-light)', color: 'var(--warning)' } },
+  { label: 'Good', value: 3, style: { background: 'var(--brand-light)', color: 'var(--brand)' } },
+  { label: 'Easy', value: 5, style: { background: 'var(--success-light)', color: 'var(--success)' } },
+];
+
 function FlashcardReview({ setId, onClose }: { setId: string; onClose: () => void }) {
   const { data, isLoading } = useQuery({
     queryKey: ['flashcard-set', setId],
@@ -103,7 +110,8 @@ function FlashcardReview({ setId, onClose }: { setId: string; onClose: () => voi
 
   const [index, setIndex] = useState(0);
   const [flipped, setFlipped] = useState(false);
-  const [known, setKnown] = useState<Set<number>>(new Set());
+  const [reviewed, setReviewed] = useState<Set<number>>(new Set());
+  const [rating, setRating] = useState<Record<string, number>>({});
 
   if (isLoading) return (
     <div className="fixed inset-0 flex items-center justify-center z-50" style={{ background: 'rgba(0,0,0,0.6)' }}>
@@ -113,10 +121,16 @@ function FlashcardReview({ setId, onClose }: { setId: string; onClose: () => voi
 
   const cards = data?.cards ?? [];
   const card = cards[index];
-  const progress = Math.round((known.size / cards.length) * 100);
+  const progress = Math.round((reviewed.size / cards.length) * 100);
 
-  const markKnown = () => {
-    setKnown((k) => new Set([...k, index]));
+  const handleRate = async (r: number) => {
+    setRating((prev) => ({ ...prev, [card.cardId]: r }));
+    setReviewed((s) => new Set([...s, index]));
+    try {
+      await flashcardsApi.reviewCard(setId, card.cardId, r);
+    } catch {
+      // fail silently — SRS update is best-effort
+    }
     if (index < cards.length - 1) { setIndex(index + 1); setFlipped(false); }
   };
 
@@ -130,7 +144,7 @@ function FlashcardReview({ setId, onClose }: { setId: string; onClose: () => voi
             <div className="w-32 h-1.5 rounded-full bg-white/20">
               <div className="h-1.5 rounded-full bg-white transition-all" style={{ width: `${progress}%` }} />
             </div>
-            <span className="text-white/70 text-sm">{known.size} known</span>
+            <span className="text-white/70 text-sm">{reviewed.size} done</span>
           </div>
           <button onClick={onClose} className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-colors">
             <X className="w-4 h-4" />
@@ -154,41 +168,45 @@ function FlashcardReview({ setId, onClose }: { setId: string; onClose: () => voi
               💡 {card.hint}
             </p>
           )}
-          {!flipped && (
-            <p className="text-xs mt-4" style={{ color: 'var(--text-muted)' }}>Tap to reveal answer</p>
-          )}
+          {!flipped && <p className="text-xs mt-4" style={{ color: 'var(--text-muted)' }}>Tap to reveal answer</p>}
         </div>
 
-        {/* Controls */}
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => { setIndex((i) => Math.max(0, i - 1)); setFlipped(false); }}
-            disabled={index === 0}
-            className="p-3 rounded-xl border transition-all disabled:opacity-30"
-            style={{ background: 'var(--bg-surface)', borderColor: 'var(--border)', color: 'var(--text-secondary)' }}
-          ><ChevronLeft className="w-5 h-5" /></button>
-
-          <button
-            onClick={() => setFlipped(false)}
-            className="p-3 rounded-xl border transition-all"
-            style={{ background: 'var(--bg-surface)', borderColor: 'var(--border)', color: 'var(--text-secondary)' }}
-          ><RotateCcw className="w-4 h-4" /></button>
-
-          {flipped && (
+        {/* SRS rating buttons (shown after flip) */}
+        {flipped ? (
+          <div className="grid grid-cols-4 gap-2">
+            {SRS_RATINGS.map(({ label, value, style }) => (
+              <button
+                key={label}
+                onClick={() => handleRate(value)}
+                className="py-2.5 rounded-xl text-sm font-semibold transition-all hover:opacity-90"
+                style={style}
+              >{label}</button>
+            ))}
+          </div>
+        ) : (
+          <div className="flex items-center gap-2">
             <button
-              onClick={markKnown}
-              className="flex-1 py-3 rounded-xl text-sm font-semibold transition-all"
-              style={{ background: 'var(--success-light)', color: 'var(--success)' }}
-            >✓ Got it</button>
-          )}
-
-          <button
-            onClick={() => { setIndex((i) => Math.min(cards.length - 1, i + 1)); setFlipped(false); }}
-            disabled={index === cards.length - 1}
-            className="p-3 rounded-xl border transition-all disabled:opacity-30"
-            style={{ background: 'var(--bg-surface)', borderColor: 'var(--border)', color: 'var(--text-secondary)' }}
-          ><ChevronRight className="w-5 h-5" /></button>
-        </div>
+              onClick={() => { setIndex((i) => Math.max(0, i - 1)); setFlipped(false); }}
+              disabled={index === 0}
+              className="p-3 rounded-xl border transition-all disabled:opacity-30"
+              style={{ background: 'var(--bg-surface)', borderColor: 'var(--border)', color: 'var(--text-secondary)' }}
+            ><ChevronLeft className="w-5 h-5" /></button>
+            <button
+              onClick={() => setFlipped(false)}
+              className="p-3 rounded-xl border transition-all"
+              style={{ background: 'var(--bg-surface)', borderColor: 'var(--border)', color: 'var(--text-secondary)' }}
+            ><RotateCcw className="w-4 h-4" /></button>
+            <button
+              onClick={() => { setIndex((i) => Math.min(cards.length - 1, i + 1)); setFlipped(false); }}
+              disabled={index === cards.length - 1}
+              className="p-3 rounded-xl border transition-all disabled:opacity-30"
+              style={{ background: 'var(--bg-surface)', borderColor: 'var(--border)', color: 'var(--text-secondary)' }}
+            ><ChevronRight className="w-5 h-5" /></button>
+          </div>
+        )}
+        <p className="text-center text-xs" style={{ color: 'rgba(255,255,255,0.5)' }}>
+          Rate how well you knew it — GenLearn schedules the next review automatically
+        </p>
       </div>
     </div>
   );

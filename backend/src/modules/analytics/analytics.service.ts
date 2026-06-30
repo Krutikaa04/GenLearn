@@ -45,6 +45,20 @@ export class AnalyticsService {
     };
   }
 
+  async getWeakTopics(studentId: string) {
+    const progress = await this.analyticsRepository.findByStudentId(studentId);
+    if (!progress) return [];
+    return progress.topicMastery
+      .filter((t) => t.masteryScore < 60)
+      .sort((a, b) => a.masteryScore - b.masteryScore)
+      .map((t) => ({
+        topic: t.topic,
+        masteryScore: t.masteryScore,
+        averageScore: t.averageScore,
+        quizzesTaken: t.quizzesTaken,
+      }));
+  }
+
   // Called internally after quiz submission
   async recordQuizResult(studentId: string, topic: string, scorePercent: number): Promise<void> {
     await this.analyticsRepository.updateAfterQuiz(studentId, topic, scorePercent);

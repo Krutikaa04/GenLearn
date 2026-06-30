@@ -10,6 +10,8 @@ import { QuizModule } from './modules/quiz/quiz.module';
 import { FlashcardModule } from './modules/flashcard/flashcard.module';
 import { AnalyticsModule } from './modules/analytics/analytics.module';
 import { AdminModule } from './modules/admin/admin.module';
+import { TutorModule } from './modules/tutor/tutor.module';
+import { StudyPlanModule } from './modules/studyplan/studyplan.module';
 import { HealthController } from './health/health.controller';
 
 @Module({
@@ -44,6 +46,8 @@ import { HealthController } from './health/health.controller';
     FlashcardModule,
     AnalyticsModule,
     AdminModule,
+    TutorModule,
+    StudyPlanModule,
   ],
   controllers: [HealthController],
   providers: [],

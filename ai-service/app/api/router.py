@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from app.api.routes import tutor, lessons, quizzes, flashcards, rag, adaptive, documents
+from app.api.routes import tutor, lessons, quizzes, flashcards, rag, adaptive, documents, studyplan
 
 api_router = APIRouter()
 
@@ -11,3 +11,4 @@ api_router.include_router(flashcards.router, prefix="/flashcards", tags=["flashc
 api_router.include_router(rag.router, prefix="/rag", tags=["rag"])
 api_router.include_router(adaptive.router, prefix="/adaptive", tags=["adaptive"])
 api_router.include_router(documents.router, prefix="/documents", tags=["documents"])
+api_router.include_router(studyplan.router, prefix="/studyplan", tags=["studyplan"])

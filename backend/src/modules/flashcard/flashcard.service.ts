@@ -85,6 +85,76 @@ export class FlashcardService {
     await this.flashcardRepository.softDelete(setId);
   }
 
+  async reviewCard(setId: string, studentId: string, cardId: string, rating: number) {
+    const set = await this.findReady(setId, studentId);
+    const card = set.cards.find((c: any) => c.cardId === cardId);
+    if (!card) throw new NotFoundException({ code: 'CARD_NOT_FOUND', message: 'Card not found' });
+
+    const { easeFactor, interval, repetitions, nextReviewAt } = this.sm2(
+      rating,
+      (card as any).easeFactor ?? 2.5,
+      (card as any).interval ?? 0,
+      (card as any).repetitions ?? 0,
+    );
+
+    await this.flashcardRepository.reviewCard(setId, cardId, easeFactor, interval, repetitions, nextReviewAt);
+    return { cardId, easeFactor, interval, repetitions, nextReviewAt };
+  }
+
+  async getDueCards(studentId: string) {
+    const due = await this.flashcardRepository.getDueCards(studentId);
+    return due.map(({ setId, setTitle, card }) => ({
+      setId,
+      setTitle,
+      cardId: card.cardId,
+      front: card.front,
+      back: card.back,
+      hint: card.hint,
+      nextReviewAt: card.nextReviewAt,
+    }));
+  }
+
+  private sm2(
+    rating: number,
+    easeFactor: number,
+    interval: number,
+    repetitions: number,
+  ): { easeFactor: number; interval: number; repetitions: number; nextReviewAt: Date } {
+    // SM-2 algorithm
+    let newInterval: number;
+    let newRepetitions: number;
+    let newEaseFactor: number;
+
+    if (rating < 3) {
+      // Incorrect or very hard — reset
+      newRepetitions = 0;
+      newInterval = 1;
+      newEaseFactor = easeFactor;
+    } else {
+      newRepetitions = repetitions + 1;
+      if (repetitions === 0) {
+        newInterval = 1;
+      } else if (repetitions === 1) {
+        newInterval = 6;
+      } else {
+        newInterval = Math.round(interval * easeFactor);
+      }
+      // Update ease factor: EF' = EF + (0.1 - (5-q)*(0.08+(5-q)*0.02))
+      newEaseFactor = easeFactor + (0.1 - (5 - rating) * (0.08 + (5 - rating) * 0.02));
+      if (newEaseFactor < 1.3) newEaseFactor = 1.3;
+    }
+
+    const nextReviewAt = new Date();
+    nextReviewAt.setDate(nextReviewAt.getDate() + newInterval);
+
+    return {
+      easeFactor: Math.round(newEaseFactor * 100) / 100,
+      interval: newInterval,
+      repetitions: newRepetitions,
+      nextReviewAt,
+    };
+  }
+
   private async findAndCheckOwnership(setId: string, studentId: string) {
     const set = await this.flashcardRepository.findById(setId);
     if (!set) throw new NotFoundException({ code: 'FLASHCARD_SET_NOT_FOUND', message: 'Flashcard set not found' });

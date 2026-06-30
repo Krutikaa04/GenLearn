@@ -15,4 +15,11 @@ export class AnalyticsController {
     const result = await this.analyticsService.getProgress(user.userId);
     return { data: result };
   }
+
+  @Get('weak-topics')
+  @ApiOperation({ summary: 'Get topics where mastery score is below 60%, sorted worst first' })
+  async getWeakTopics(@CurrentUser() user: JwtPayload) {
+    const result = await this.analyticsService.getWeakTopics(user.userId);
+    return { data: result };
+  }
 }

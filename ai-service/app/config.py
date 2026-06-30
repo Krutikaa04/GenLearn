@@ -7,7 +7,7 @@ class Settings(BaseSettings):
 
     # AI Provider
     GEMINI_API_KEY: str
-    MODEL_NAME: str = "gemini-1.5-flash"
+    MODEL_NAME: str = "gemini-2.0-flash"
     EMBEDDING_MODEL: str = "models/text-embedding-004"
 
     # Internal security

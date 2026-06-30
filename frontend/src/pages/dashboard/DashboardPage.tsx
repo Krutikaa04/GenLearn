@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { FileText, BookOpen, BrainCircuit, Layers, Flame, TrendingUp, ArrowRight, Zap } from 'lucide-react';
+import { FileText, BookOpen, BrainCircuit, Layers, TrendingUp, ArrowRight, Zap, AlertTriangle } from 'lucide-react';
 import { analyticsApi } from '../../api/analytics.api';
 import { useAuthStore } from '../../store/auth.store';
 import { Card } from '../../components/ui/Card';
@@ -45,6 +45,10 @@ export function DashboardPage() {
   const { data } = useQuery({
     queryKey: ['progress'],
     queryFn: () => analyticsApi.getProgress().then((r) => r.data.data),
+  });
+  const { data: weakTopics = [] } = useQuery({
+    queryKey: ['weak-topics'],
+    queryFn: () => analyticsApi.getWeakTopics().then((r) => r.data.data),
   });
 
   const hour = new Date().getHours();
@@ -133,6 +137,41 @@ export function DashboardPage() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {stats.map((s) => <StatCard key={s.label} {...s} />)}
       </div>
+
+      {/* Weak topics alert */}
+      {weakTopics.length > 0 && (
+        <Card padding="md">
+          <div className="flex items-center gap-2 mb-3">
+            <AlertTriangle className="w-4 h-4" style={{ color: 'var(--warning)' }} />
+            <h2 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Needs attention</h2>
+          </div>
+          <div className="space-y-2">
+            {weakTopics.slice(0, 3).map((t: any) => (
+              <div key={t.topic} className="flex items-center justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate" style={{ color: 'var(--text-primary)' }}>{t.topic}</p>
+                  <div className="h-1.5 rounded-full mt-1" style={{ background: 'var(--bg-subtle)' }}>
+                    <div className="h-1.5 rounded-full" style={{ width: `${t.masteryScore}%`, background: 'var(--danger)' }} />
+                  </div>
+                </div>
+                <span className="text-xs font-semibold shrink-0" style={{ color: 'var(--danger)' }}>{t.masteryScore}%</span>
+                <div className="flex gap-1 shrink-0">
+                  <Link
+                    to={`/lessons?topic=${encodeURIComponent(t.topic)}`}
+                    className="text-xs px-2 py-1 rounded-lg transition-colors"
+                    style={{ background: 'var(--brand-light)', color: 'var(--brand)' }}
+                  >Lesson</Link>
+                  <Link
+                    to={`/quizzes?topic=${encodeURIComponent(t.topic)}`}
+                    className="text-xs px-2 py-1 rounded-lg transition-colors"
+                    style={{ background: 'var(--warning-light)', color: 'var(--warning)' }}
+                  >Quiz</Link>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
 
       {/* Bottom row */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

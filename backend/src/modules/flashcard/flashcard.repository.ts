@@ -48,4 +48,45 @@ export class FlashcardRepository {
   async softDelete(setId: string): Promise<void> {
     await this.model.updateOne({ setId }, { $set: { deletedAt: new Date() } }).exec();
   }
+
+  async reviewCard(
+    setId: string,
+    cardId: string,
+    easeFactor: number,
+    interval: number,
+    repetitions: number,
+    nextReviewAt: Date,
+  ): Promise<void> {
+    await this.model.updateOne(
+      { setId, 'cards.cardId': cardId },
+      {
+        $set: {
+          'cards.$.easeFactor': easeFactor,
+          'cards.$.interval': interval,
+          'cards.$.repetitions': repetitions,
+          'cards.$.nextReviewAt': nextReviewAt,
+        },
+      },
+    ).exec();
+  }
+
+  async getDueCards(studentId: string): Promise<{ setId: string; setTitle: string; card: any }[]> {
+    const now = new Date();
+    const sets = await this.model.find({
+      studentId,
+      deletedAt: null,
+      status: FlashcardSetStatus.READY,
+      'cards.nextReviewAt': { $lte: now },
+    }).exec();
+
+    const due: { setId: string; setTitle: string; card: any }[] = [];
+    for (const set of sets) {
+      for (const card of set.cards) {
+        if (card.nextReviewAt && card.nextReviewAt <= now) {
+          due.push({ setId: set.setId, setTitle: set.title, card });
+        }
+      }
+    }
+    return due;
+  }
 }

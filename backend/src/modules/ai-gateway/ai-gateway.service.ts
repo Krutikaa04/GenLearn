@@ -46,6 +46,9 @@ export interface GenerateQuizPayload {
   difficulty: string;
   questionCount: number;
   documentIds: string[];
+  challengeMode?: boolean;
+  challengeTopics?: string[];
+  timeLimitMinutes?: number;
 }
 
 export interface QuizQuestion {
@@ -98,6 +101,56 @@ export interface RagQueryResult {
   }>;
 }
 
+export interface TutorChatPayload {
+  studentId: string;
+  topic: string;
+  message: string;
+  conversationHistory: Array<{ role: string; content: string }>;
+  documentIds?: string[];
+  studentContext?: Record<string, unknown>;
+}
+
+export interface TutorChatResult {
+  reply: string;
+  sources: unknown[];
+  followUpSuggestions: string[];
+}
+
+export interface TopicMasteryInput {
+  topic: string;
+  masteryScore: number;
+}
+
+export interface GenerateStudyPlanPayload {
+  userId: string;
+  goal: string;
+  targetDate: string;
+  topics: string[];
+  masteryData: TopicMasteryInput[];
+  hoursPerDay: number;
+}
+
+export interface StudyTask {
+  type: string;
+  topic: string;
+  durationMinutes: number;
+  priority: string;
+  rationale: string;
+}
+
+export interface StudyDay {
+  day: number;
+  date: string;
+  tasks: StudyTask[];
+  totalMinutes: number;
+}
+
+export interface GenerateStudyPlanResult {
+  title: string;
+  summary: string;
+  plan: StudyDay[];
+}
+
 @Injectable()
 export class AiGatewayService {
   private readonly logger = new Logger(AiGatewayService.name);
@@ -130,6 +183,14 @@ export class AiGatewayService {
 
   async ragQuery(payload: RagQueryPayload): Promise<RagQueryResult> {
     return this.post<RagQueryResult>('/ai/v1/rag/query', payload);
+  }
+
+  async tutorChat(payload: TutorChatPayload): Promise<TutorChatResult> {
+    return this.post<TutorChatResult>('/ai/v1/tutor/chat', payload);
+  }
+
+  async generateStudyPlan(payload: GenerateStudyPlanPayload): Promise<GenerateStudyPlanResult> {
+    return this.post<GenerateStudyPlanResult>('/ai/v1/studyplan/generate', payload);
   }
 
   private async post<T>(path: string, body: unknown): Promise<T> {

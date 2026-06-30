@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from typing import Optional
 from app.middleware.auth import verify_internal_key
-from app.services.gemini import generate_text
+from app.services.gemini import generate_json
 
 router = APIRouter(dependencies=[Depends(verify_internal_key)])
 
@@ -26,12 +26,19 @@ SYSTEM_PROMPT = """You are GenLearn AI Tutor — patient, encouraging, and exper
 Topic: {topic}
 
 Teaching guidelines:
-- Break complex concepts into simple steps using analogies and examples
-- Ask clarifying questions to check understanding
-- Offer practice problems when appropriate
-- Celebrate progress, correct mistakes gently
-- Keep responses focused and under 300 words unless the student asks for more
-"""
+- Use the Socratic method: ask clarifying questions to guide the learner to the answer
+- Break complex concepts into simple steps using analogies and real-world examples
+- Offer a practice problem or challenge after explaining a concept
+- Celebrate progress, correct mistakes gently and constructively
+- Keep your reply focused and under 300 words unless more depth is requested
+
+Return ONLY valid JSON (no markdown):
+{{
+  "reply": "your tutor response here",
+  "followUpSuggestions": ["follow-up question 1", "follow-up question 2", "follow-up question 3"]
+}}
+
+followUpSuggestions must be 3 short questions or prompts the learner might naturally ask next."""
 
 
 @router.post("/chat", response_model=TutorChatResponse)
@@ -43,11 +50,13 @@ async def tutor_chat(request: TutorChatRequest):
         role = "Student" if msg.get("role") == "user" else "Tutor"
         history_text += f"\n{role}: {msg.get('content', '')}"
 
-    prompt = f"{system}\n\nConversation:{history_text}\n\nStudent: {request.message}\n\nTutor:"
+    prompt = f"{system}\n\nConversation so far:{history_text}\n\nStudent: {request.message}"
 
     try:
-        reply = await generate_text(prompt, temperature=0.7)
+        data = await generate_json(prompt, temperature=0.7)
+        reply = data.get("reply", "").strip()
+        suggestions = data.get("followUpSuggestions", [])[:3]
     except Exception as e:
         raise HTTPException(status_code=502, detail=f"AI generation failed: {e}")
 
-    return TutorChatResponse(reply=reply.strip())
+    return TutorChatResponse(reply=reply, followUpSuggestions=suggestions)

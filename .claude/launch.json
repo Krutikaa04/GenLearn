@@ -1,0 +1,23 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "Frontend (Vite + React)",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--dir", "frontend", "run", "dev"],
+      "port": 5173
+    },
+    {
+      "name": "Backend (NestJS)",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--dir", "backend", "run", "start:dev"],
+      "port": 3000
+    },
+    {
+      "name": "AI Service (FastAPI)",
+      "runtimeExecutable": "docker",
+      "runtimeArgs": ["compose", "up", "ai-service"],
+      "port": 8000
+    }
+  ]
+}

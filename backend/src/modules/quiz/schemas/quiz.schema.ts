@@ -30,6 +30,9 @@ class QuizQuestion {
 
   @Prop({ required: true, select: false })
   explanation: string;
+
+  @Prop({ type: String, default: null })
+  topic: string | null;
 }
 
 class QuizAnswer {
@@ -83,6 +86,15 @@ export class Quiz {
 
   @Prop({ type: Date, default: null })
   submittedAt: Date | null;
+
+  @Prop({ default: false })
+  challengeMode: boolean;
+
+  @Prop({ type: Number, default: null })
+  timeLimitMinutes: number | null;
+
+  @Prop({ type: [String], default: [] })
+  challengeTopics: string[];
 
   @Prop({ type: String, default: null })
   generationError: string | null;

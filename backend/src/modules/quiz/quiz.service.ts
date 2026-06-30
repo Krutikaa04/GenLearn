@@ -32,10 +32,15 @@ export class QuizService {
     const quiz = await this.quizRepository.create({
       quizId,
       studentId,
-      topic: dto.topic,
+      topic: dto.challengeMode && dto.challengeTopics?.length
+        ? dto.challengeTopics.join(', ')
+        : dto.topic,
       difficulty: dto.difficulty,
       questionCount: dto.questionCount ?? 10,
       documentIds: dto.documentIds ?? [],
+      challengeMode: dto.challengeMode ?? false,
+      challengeTopics: dto.challengeTopics ?? [],
+      timeLimitMinutes: dto.timeLimitMinutes ?? null,
       status: QuizStatus.PENDING,
     });
 
@@ -46,6 +51,9 @@ export class QuizService {
       difficulty: dto.difficulty,
       questionCount: dto.questionCount ?? 10,
       documentIds: dto.documentIds ?? [],
+      challengeMode: dto.challengeMode,
+      challengeTopics: dto.challengeTopics,
+      timeLimitMinutes: dto.timeLimitMinutes,
     };
 
     await this.generationQueue.add('generate', jobData, {
@@ -63,6 +71,8 @@ export class QuizService {
       topic: quiz.topic,
       difficulty: quiz.difficulty,
       questionCount: quiz.questionCount,
+      challengeMode: quiz.challengeMode,
+      timeLimitMinutes: quiz.timeLimitMinutes,
       pollUrl: `/api/v1/quizzes/${quizId}/status`,
     };
   }
@@ -211,6 +221,9 @@ export class QuizService {
       totalQuestions: quiz.totalQuestions,
       submittedAt: quiz.submittedAt,
       documentIds: quiz.documentIds,
+      challengeMode: quiz.challengeMode,
+      timeLimitMinutes: quiz.timeLimitMinutes,
+      challengeTopics: quiz.challengeTopics,
       createdAt: quiz.createdAt,
       updatedAt: quiz.updatedAt,
     };

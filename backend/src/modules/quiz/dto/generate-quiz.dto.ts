@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsArray, IsEnum, IsNumber, IsOptional, IsString, IsUUID, Max, MaxLength, Min, MinLength } from 'class-validator';
+import { IsArray, IsBoolean, IsEnum, IsNumber, IsOptional, IsString, IsUUID, Max, MaxLength, Min, MinLength } from 'class-validator';
 import { Type } from 'class-transformer';
 import { DifficultyLevel } from '../schemas/quiz.schema';
 
@@ -27,4 +27,23 @@ export class GenerateQuizDto {
   @IsArray()
   @IsUUID('4', { each: true })
   documentIds?: string[] = [];
+
+  @ApiPropertyOptional({ default: false })
+  @IsOptional()
+  @IsBoolean()
+  challengeMode?: boolean = false;
+
+  @ApiPropertyOptional({ type: [String] })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  challengeTopics?: string[] = [];
+
+  @ApiPropertyOptional({ minimum: 5, maximum: 180 })
+  @IsOptional()
+  @IsNumber()
+  @Min(5)
+  @Max(180)
+  @Type(() => Number)
+  timeLimitMinutes?: number;
 }

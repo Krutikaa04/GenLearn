@@ -10,6 +10,8 @@ import { DocumentsPage } from './pages/documents/DocumentsPage';
 import { LessonsPage } from './pages/lessons/LessonsPage';
 import { QuizzesPage } from './pages/quizzes/QuizzesPage';
 import { FlashcardsPage } from './pages/flashcards/FlashcardsPage';
+import { TutorPage } from './pages/tutor/TutorPage';
+import { StudyPlanPage } from './pages/studyplan/StudyPlanPage';
 
 const qc = new QueryClient({ defaultOptions: { queries: { retry: 1, staleTime: 30_000 } } });
 
@@ -37,6 +39,8 @@ export default function App() {
             <Route path="/lessons" element={<LessonsPage />} />
             <Route path="/quizzes" element={<QuizzesPage />} />
             <Route path="/flashcards" element={<FlashcardsPage />} />
+            <Route path="/tutor" element={<TutorPage />} />
+            <Route path="/study-plan" element={<StudyPlanPage />} />
           </Route>
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>

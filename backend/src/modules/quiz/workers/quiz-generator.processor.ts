@@ -14,6 +14,9 @@ export interface QuizGenerationJob {
   difficulty: DifficultyLevel;
   questionCount: number;
   documentIds: string[];
+  challengeMode?: boolean;
+  challengeTopics?: string[];
+  timeLimitMinutes?: number;
 }
 
 @Processor(QUIZ_GENERATION_QUEUE)
@@ -28,8 +31,8 @@ export class QuizGeneratorWorker extends WorkerHost {
   }
 
   async process(job: Job<QuizGenerationJob>): Promise<void> {
-    const { quizId, studentId, topic, difficulty, questionCount, documentIds } = job.data;
-    this.logger.log(`Generating quiz ${quizId}: "${topic}" (${difficulty}, ${questionCount}q)`);
+    const { quizId, studentId, topic, difficulty, questionCount, documentIds, challengeMode, challengeTopics, timeLimitMinutes } = job.data;
+    this.logger.log(`Generating quiz ${quizId}: "${topic}" (${difficulty}, ${questionCount}q, challenge=${!!challengeMode})`);
 
     try {
       await this.quizRepository.updateStatus(quizId, QuizStatus.GENERATING);
@@ -41,6 +44,9 @@ export class QuizGeneratorWorker extends WorkerHost {
         difficulty,
         questionCount,
         documentIds,
+        challengeMode,
+        challengeTopics,
+        timeLimitMinutes,
       });
 
       await this.quizRepository.updateStatus(quizId, QuizStatus.READY, {
