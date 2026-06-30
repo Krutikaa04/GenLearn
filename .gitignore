@@ -54,3 +54,6 @@ htmlcov/
 .cache/
 .parcel-cache/
 *.tsbuildinfo
+
+# Local AI context files
+PROJECT_CONTEXT_FOR_CLAUDE.md
