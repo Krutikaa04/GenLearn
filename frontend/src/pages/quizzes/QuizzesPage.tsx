@@ -294,26 +294,23 @@ function QuizTaker({ quizId, onClose }: { quizId: string; onClose: () => void })
             </div>
 
             <div className="space-y-2 max-h-64 overflow-y-auto">
-              {(result.answers ?? []).map((r: any, i: number) => {
-                const q = questions.find((q: any) => q.questionId === r.questionId);
-                return (
-                  <div key={i} className="rounded-xl p-3 border flex gap-2" style={{
-                    background: r.isCorrect ? 'var(--success-light)' : 'var(--danger-light)',
-                    borderColor: r.isCorrect ? 'var(--success)' : 'var(--danger)',
-                  }}>
-                    {r.isCorrect
-                      ? <CheckCircle className="w-4 h-4 shrink-0 mt-0.5" style={{ color: 'var(--success)' }} />
-                      : <XCircle className="w-4 h-4 shrink-0 mt-0.5" style={{ color: 'var(--danger)' }} />
-                    }
-                    <div>
-                      <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{q?.text ?? r.questionId}</p>
-                      {!r.isCorrect && r.explanation && (
-                        <p className="text-xs mt-1" style={{ color: 'var(--text-secondary)' }}>{r.explanation}</p>
-                      )}
-                    </div>
+              {(result.answers ?? []).map((r: any, i: number) => (
+                <div key={i} className="rounded-xl p-3 border flex gap-2" style={{
+                  background: r.isCorrect ? 'var(--success-light)' : 'var(--danger-light)',
+                  borderColor: r.isCorrect ? 'var(--success)' : 'var(--danger)',
+                }}>
+                  {r.isCorrect
+                    ? <CheckCircle className="w-4 h-4 shrink-0 mt-0.5" style={{ color: 'var(--success)' }} />
+                    : <XCircle className="w-4 h-4 shrink-0 mt-0.5" style={{ color: 'var(--danger)' }} />
+                  }
+                  <div>
+                    <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{r.questionText}</p>
+                    {!r.isCorrect && r.explanation && (
+                      <p className="text-xs mt-1" style={{ color: 'var(--text-secondary)' }}>{r.explanation}</p>
+                    )}
                   </div>
-                );
-              })}
+                </div>
+              ))}
             </div>
 
             <WeakTopicsPanel topic={quiz?.topic ?? ''} />

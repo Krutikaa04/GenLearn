@@ -154,6 +154,7 @@ export class QuizService {
       scorePercent,
       answers: evaluatedAnswers.map((a) => ({
         ...a,
+        questionText: (questionMap.get(a.questionId) as any)?.text,
         explanation: (questionMap.get(a.questionId) as any)?.explanation,
         correctIndex: (questionMap.get(a.questionId) as any)?.correctIndex,
       })),
