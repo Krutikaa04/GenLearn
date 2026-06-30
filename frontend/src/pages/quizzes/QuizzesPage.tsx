@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { BrainCircuit, Plus, Trash2, Loader2, CheckCircle, XCircle, X, Trophy, Zap, AlertTriangle } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -203,29 +203,9 @@ function QuizTaker({ quizId, onClose }: { quizId: string; onClose: () => void })
   const [submitting, setSubmitting] = useState(false);
   const [current, setCurrent] = useState(0);
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
-  const [timerStarted, setTimerStarted] = useState(false);
 
-  // Start timer if challenge mode
   const quiz = data;
   const isChallenge = quiz?.challengeMode;
-
-  useState(() => {
-    if (quiz?.timeLimitMinutes && !timerStarted) {
-      setTimeLeft(quiz.timeLimitMinutes * 60);
-      setTimerStarted(true);
-    }
-  });
-
-  // Countdown
-  if (timeLeft !== null && timeLeft > 0 && !result) {
-    setTimeout(() => setTimeLeft((t) => (t !== null && t > 0 ? t - 1 : t)), 1000);
-  }
-  if (timeLeft === 0 && !result && !submitting) {
-    // Auto-submit when time runs out
-    const payload = Object.entries(answers).map(([questionId, selectedIndex]) => ({ questionId, selectedIndex }));
-    setSubmitting(true);
-    quizzesApi.submit(quizId, payload).then((res) => setResult(res.data.data)).catch(() => {}).finally(() => setSubmitting(false));
-  }
 
   const submit = async () => {
     const payload = Object.entries(answers).map(([questionId, selectedIndex]) => ({ questionId, selectedIndex }));
@@ -239,6 +219,29 @@ function QuizTaker({ quizId, onClose }: { quizId: string; onClose: () => void })
       setSubmitting(false);
     }
   };
+
+  // Keep a stable ref so the interval closure always calls the latest submit
+  const submitRef = useRef(submit);
+  submitRef.current = submit;
+
+  // Initialise the countdown once the quiz data arrives
+  useEffect(() => {
+    if (quiz?.timeLimitMinutes && timeLeft === null) {
+      setTimeLeft(quiz.timeLimitMinutes * 60);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [quiz?.timeLimitMinutes]);
+
+  // Countdown tick — one interval per second, properly cleaned up
+  useEffect(() => {
+    if (timeLeft === null || result) return;
+    if (timeLeft === 0) {
+      submitRef.current();
+      return;
+    }
+    const id = setInterval(() => setTimeLeft((t) => (t !== null && t > 0 ? t - 1 : 0)), 1000);
+    return () => clearInterval(id);
+  }, [timeLeft, result]);
 
   if (isLoading) return (
     <div className="fixed inset-0 flex items-center justify-center z-50" style={{ background: 'rgba(0,0,0,0.6)' }}>
