@@ -303,8 +303,13 @@ function QuizTaker({ quizId, onClose }: { quizId: string; onClose: () => void })
                     ? <CheckCircle className="w-4 h-4 shrink-0 mt-0.5" style={{ color: 'var(--success)' }} />
                     : <XCircle className="w-4 h-4 shrink-0 mt-0.5" style={{ color: 'var(--danger)' }} />
                   }
-                  <div>
+                  <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{r.questionText}</p>
+                    {!r.isCorrect && r.correctIndex !== undefined && (
+                      <p className="text-xs mt-1 font-medium" style={{ color: 'var(--success)' }}>
+                        ✓ {questions[questions.findIndex((q: any) => q.questionId === r.questionId)]?.options?.[r.correctIndex]}
+                      </p>
+                    )}
                     {!r.isCorrect && r.explanation && (
                       <p className="text-xs mt-1" style={{ color: 'var(--text-secondary)' }}>{r.explanation}</p>
                     )}
