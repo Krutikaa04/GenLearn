@@ -3,6 +3,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { BullModule } from '@nestjs/bullmq';
+import { TerminusModule } from '@nestjs/terminus';
 import { AuthModule } from './modules/auth/auth.module';
 import { DocumentModule } from './modules/document/document.module';
 import { LessonModule } from './modules/lesson/lesson.module';
@@ -40,6 +41,7 @@ import { HealthController } from './health/health.controller';
       inject: [ConfigService],
     }),
     ThrottlerModule.forRoot([{ ttl: 60000, limit: 60 }]),
+    TerminusModule,
     AuthModule,
     DocumentModule,
     LessonModule,
