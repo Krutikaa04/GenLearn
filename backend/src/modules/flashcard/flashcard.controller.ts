@@ -50,6 +50,13 @@ export class FlashcardController {
     return { data: result };
   }
 
+  @Get('due')
+  @ApiOperation({ summary: 'Get all cards due for review today (SRS)' })
+  async getDue(@CurrentUser() user: JwtPayload) {
+    const result = await this.flashcardService.getDueCards(user.userId);
+    return { data: result };
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Get flashcard set with all cards' })
   async findOne(@CurrentUser() user: JwtPayload, @Param('id') id: string) {
@@ -62,13 +69,6 @@ export class FlashcardController {
   @ApiOperation({ summary: 'Delete a flashcard set' })
   async delete(@CurrentUser() user: JwtPayload, @Param('id') id: string): Promise<void> {
     await this.flashcardService.delete(id, user.userId);
-  }
-
-  @Get('due')
-  @ApiOperation({ summary: 'Get all cards due for review today (SRS)' })
-  async getDue(@CurrentUser() user: JwtPayload) {
-    const result = await this.flashcardService.getDueCards(user.userId);
-    return { data: result };
   }
 
   @Patch(':id/cards/:cardId/review')
