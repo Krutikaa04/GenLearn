@@ -4,6 +4,7 @@ import { Layers, Plus, Trash2, Loader2, RotateCcw, ChevronLeft, ChevronRight, X,
 import toast from 'react-hot-toast';
 import { flashcardsApi } from '../../api/flashcards.api';
 import { documentsApi } from '../../api/documents.api';
+import { lessonsApi } from '../../api/lessons.api';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
@@ -19,6 +20,11 @@ function GenerateModal({ onClose }: { onClose: () => void }) {
   const { data: docs = [] } = useQuery({
     queryKey: ['documents'],
     queryFn: () => documentsApi.list().then((r) => r.data.data.filter((d: any) => d.status === 'ready')),
+  });
+
+  const { data: lessons = [] } = useQuery({
+    queryKey: ['lessons'],
+    queryFn: () => lessonsApi.list().then((r) => r.data.data.filter((l: any) => l.status === 'ready')),
   });
 
   const mutation = useMutation({
@@ -63,12 +69,21 @@ function GenerateModal({ onClose }: { onClose: () => void }) {
           </div>
         ) : (
           <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Lesson ID</label>
-            <input
-              className="w-full rounded-xl px-3 py-2.5 text-sm ring-1 focus:ring-2 focus:ring-[var(--brand)] focus:outline-none"
-              style={{ background: 'var(--bg-surface)', color: 'var(--text-primary)' }}
-              placeholder="Paste lesson ID" value={sourceId} onChange={(e) => setSourceId(e.target.value)}
-            />
+            <label className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Select lesson</label>
+            {lessons.length > 0 ? (
+              <select
+                className="w-full rounded-xl px-3 py-2.5 text-sm ring-1 focus:ring-2 focus:ring-[var(--brand)] focus:outline-none"
+                style={{ background: 'var(--bg-surface)', color: 'var(--text-primary)' }}
+                value={sourceId} onChange={(e) => setSourceId(e.target.value)}
+              >
+                <option value="">Select a ready lesson…</option>
+                {lessons.map((l: any) => (
+                  <option key={l.lessonId} value={l.lessonId}>{l.title || l.topic}</option>
+                ))}
+              </select>
+            ) : (
+              <p className="text-sm" style={{ color: 'var(--text-muted)' }}>No ready lessons yet. Generate a lesson first.</p>
+            )}
           </div>
         )}
 
