@@ -90,23 +90,51 @@ Requirements:
 """
 
 
+def distribute_challenge_questions(num_topics: int, total: int) -> list[int]:
+    """Weighted question distribution across challenge topics.
+
+    Topic 0 (the weakest, by caller convention) gets the most questions,
+    the last topic gets the fewest. Counts always sum to exactly `total`
+    and are never negative. When `total` is at least `num_topics`, every
+    topic gets at least 1 question; when there are more topics than
+    questions, the lowest-priority topics may get 0.
+    """
+    if num_topics <= 0 or total <= 0:
+        return [0] * max(num_topics, 0)
+
+    weights = [num_topics - i for i in range(num_topics)]
+    weight_sum = sum(weights)
+    counts = [max(0, round(total * w / weight_sum)) for w in weights]
+
+    # Rounding can leave the sum off by a few — walk the list (highest
+    # priority first) handing out/reclaiming one question at a time until
+    # it matches exactly, never letting a count go negative.
+    diff = total - sum(counts)
+    i = 0
+    while diff != 0:
+        idx = i % num_topics
+        if diff > 0:
+            counts[idx] += 1
+            diff -= 1
+        elif counts[idx] > 0:
+            counts[idx] -= 1
+            diff += 1
+        i += 1
+
+    return counts
+
+
 @router.post("/generate", response_model=GenerateQuizResponse)
 async def generate_quiz(request: GenerateQuizRequest):
     if request.challengeMode and request.challengeTopics:
         # Distribute questions across topics: weak topics (listed first) get more questions
-        n = len(request.challengeTopics)
         total = request.questionCount
-        # Weighted distribution: topic[0] gets most, topic[-1] gets least
-        weights = [n - i for i in range(n)]
-        weight_sum = sum(weights)
-        counts = [max(1, round(total * w / weight_sum)) for w in weights]
-        # Adjust to exactly total
-        diff = total - sum(counts)
-        counts[0] += diff
+        counts = distribute_challenge_questions(len(request.challengeTopics), total)
 
         topic_counts = "\n".join(
             f"- {topic}: {count} question{'s' if count != 1 else ''}"
             for topic, count in zip(request.challengeTopics, counts)
+            if count > 0
         )
         prompt = CHALLENGE_PROMPT.format(
             topic_counts=topic_counts,
