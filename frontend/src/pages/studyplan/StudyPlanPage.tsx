@@ -33,7 +33,9 @@ export function StudyPlanPage() {
   const [topicInput, setTopicInput] = useState('');
   const [topics, setTopics] = useState<string[]>([]);
   const [hoursPerDay, setHoursPerDay] = useState(2);
-  const [plan, setPlan] = useState<any>(null);
+  const [plan, setPlan] = useState<any>(() => {
+    try { return JSON.parse(sessionStorage.getItem('genlearn_studyplan') ?? 'null'); } catch { return null; }
+  });
 
   const { data: progress } = useQuery({
     queryKey: ['progress'],
@@ -49,7 +51,9 @@ export function StudyPlanPage() {
       return studyplanApi.generate({ goal, targetDate, topics, masteryData, hoursPerDay });
     },
     onSuccess: (res) => {
-      setPlan(res.data.data);
+      const generated = res.data.data;
+      setPlan(generated);
+      try { sessionStorage.setItem('genlearn_studyplan', JSON.stringify(generated)); } catch {}
       toast.success('Study plan generated!');
     },
     onError: (err: any) => toast.error(err.response?.data?.error?.message || 'Generation failed'),
@@ -74,7 +78,10 @@ export function StudyPlanPage() {
             <h1 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>{plan.title}</h1>
             <p className="text-sm mt-1 max-w-xl" style={{ color: 'var(--text-muted)' }}>{plan.summary}</p>
           </div>
-          <Button variant="outline" onClick={() => setPlan(null)}>
+          <Button variant="outline" onClick={() => {
+            setPlan(null);
+            try { sessionStorage.removeItem('genlearn_studyplan'); } catch {}
+          }}>
             <Plus className="w-4 h-4" /> New plan
           </Button>
         </div>

@@ -178,7 +178,7 @@ export function DocumentsPage() {
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium truncate" style={{ color: 'var(--text-primary)' }}>{doc.originalFilename}</p>
                 <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
-                  {doc.fileType?.toUpperCase()} · {(doc.fileSize / 1024).toFixed(0)} KB
+                  {doc.fileType?.toUpperCase()} · {doc.fileSizeBytes ? (doc.fileSizeBytes / 1024).toFixed(0) + ' KB' : '—'}
                 </p>
               </div>
               <Badge label={doc.status} color={statusColor[doc.status] ?? 'gray'} />
