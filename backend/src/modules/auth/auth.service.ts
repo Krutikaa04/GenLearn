@@ -47,6 +47,11 @@ export class AuthService {
       firstName: dto.firstName,
       lastName: dto.lastName,
       emailVerificationToken: verificationTokenHash,
+      // Verification requirement is temporarily disabled (see issue #20) — real email
+      // delivery only reaches the Resend account owner's own address until a domain
+      // is verified (issue #19), so gating login on it would strand every other user.
+      emailVerified: true,
+      status: UserStatus.ACTIVE,
     });
 
     await this.authRepository.createProfile({
@@ -73,9 +78,7 @@ export class AuthService {
       throw new ForbiddenException({ code: 'ACCOUNT_SUSPENDED', message: 'Account has been suspended' });
     }
 
-    if (!user.emailVerified) {
-      throw new ForbiddenException({ code: 'EMAIL_NOT_VERIFIED', message: 'Please verify your email before logging in' });
-    }
+    // Email verification requirement is temporarily disabled — see issue #20
 
     const { accessToken, rawRefreshToken } = await this.generateTokenPair(user.userId, user.email, user.role);
     this.setRefreshCookie(res, rawRefreshToken);
