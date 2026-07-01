@@ -179,7 +179,7 @@ export function DocumentsPage() {
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search documents…"
               className="w-full pl-9 pr-4 py-2 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand)] ring-1"
-              style={{ background: 'var(--bg-surface)', color: 'var(--text-primary)', ringColor: 'var(--border)' }}
+              style={{ background: 'var(--bg-surface)', color: 'var(--text-primary)' }}
             />
           </div>
           <div className="flex gap-1 flex-wrap">

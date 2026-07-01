@@ -3,7 +3,7 @@ import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, FileText, BookOpen, BrainCircuit,
   Layers, LogOut, GraduationCap, ChevronRight, BotMessageSquare,
-  CalendarDays, Menu, X, Shield,
+  CalendarDays, Menu, Shield,
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { useAuthStore } from '../../store/auth.store';

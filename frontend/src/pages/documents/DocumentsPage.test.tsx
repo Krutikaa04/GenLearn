@@ -179,9 +179,6 @@ describe('DocumentsPage', () => {
     vi.spyOn(window, 'confirm').mockReturnValue(true);
     render(<DocumentsPage />, { wrapper: wrapper() });
     await screen.findByText('lecture-notes.pdf');
-    const trashBtn = document.querySelector('button:not([title])') as HTMLButtonElement;
-    const allBtns = Array.from(document.querySelectorAll('button'));
-    const deleteBtn = allBtns.find((b) => b.querySelector('svg') && !b.title && !b.closest('[class*="header"]'));
     const docCardBtns = Array.from(document.querySelectorAll('.space-y-2 button'));
     const lastBtn = docCardBtns[docCardBtns.length - 1] as HTMLButtonElement;
     if (lastBtn) fireEvent.click(lastBtn);

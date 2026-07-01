@@ -202,16 +202,7 @@ describe('LessonsPage', () => {
     vi.spyOn(window, 'confirm').mockReturnValue(true);
     render(<LessonsPage />, { wrapper: wrapper() });
     await screen.findByText('Introduction to Binary Trees');
-    // Find the trash button by title attribute or by being the last button in the card
-    const allBtns = screen.getAllByRole('button');
-    // The delete (trash) button is after the quiz button in the DOM — find it via SVG path inspection
-    const deleteBtn = Array.from(document.querySelectorAll('button')).find(
-      (b) => b.querySelector('svg') &&
-        !b.closest('[role="dialog"]') &&
-        (b as HTMLButtonElement).onclick !== null ||
-        b.getAttribute('aria-label') === 'delete',
-    ) ?? allBtns.find((b) => b.closest('.overflow-hidden') && b.querySelector('svg'));
-    // Fallback: click the last icon-only button in the card
+    // The delete (trash) button is the last icon-only button in the card
     const cardButtons = Array.from(document.querySelectorAll('.overflow-hidden button'));
     if (cardButtons.length > 0) {
       fireEvent.click(cardButtons[cardButtons.length - 1]);

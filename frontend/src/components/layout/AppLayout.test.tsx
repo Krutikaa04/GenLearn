@@ -46,7 +46,7 @@ function mockStore(user = studentUser) {
 
 function wrapper() {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return ({ children }: any) => (
+  return () => (
     <QueryClientProvider client={qc}>
       <MemoryRouter initialEntries={['/dashboard']}>
         <Routes>
