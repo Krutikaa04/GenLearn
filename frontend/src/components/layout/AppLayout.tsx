@@ -133,7 +133,13 @@ export function AppLayout() {
         <div className="p-3 border-t space-y-0.5" style={{ borderColor: 'var(--border)' }}>
           <ThemeToggle />
           {/* User row */}
-          <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl" style={{ color: 'var(--text-secondary)' }}>
+          <NavLink
+            to="/profile"
+            className={({ isActive }) =>
+              `flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-150 ${isActive ? '' : 'hover:bg-[var(--bg-subtle)]'}`
+            }
+            style={({ isActive }) => isActive ? { background: 'var(--brand-light)' } : { color: 'var(--text-secondary)' }}
+          >
             <div className="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold text-white shrink-0"
               style={{ background: 'var(--brand)' }}>
               {initials}
@@ -144,7 +150,7 @@ export function AppLayout() {
               </p>
               <p className="text-xs truncate" style={{ color: 'var(--text-muted)' }}>{user?.email}</p>
             </div>
-          </div>
+          </NavLink>
           <button
             onClick={handleLogout}
             className="flex items-center gap-3 px-3 py-2.5 w-full rounded-xl text-sm font-medium transition-all duration-150 hover:bg-[var(--danger-light)]"

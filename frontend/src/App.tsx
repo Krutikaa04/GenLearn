@@ -9,6 +9,7 @@ import { RegisterPage } from './pages/auth/RegisterPage';
 import { ForgotPasswordPage } from './pages/auth/ForgotPasswordPage';
 import { ResetPasswordPage } from './pages/auth/ResetPasswordPage';
 import { VerifyEmailPage } from './pages/auth/VerifyEmailPage';
+import { ProfilePage } from './pages/profile/ProfilePage';
 import { DashboardPage } from './pages/dashboard/DashboardPage';
 import { DocumentsPage } from './pages/documents/DocumentsPage';
 import { LessonsPage } from './pages/lessons/LessonsPage';
@@ -49,6 +50,7 @@ export default function App() {
             <Route path="/flashcards" element={<FlashcardsPage />} />
             <Route path="/tutor" element={<TutorPage />} />
             <Route path="/study-plan" element={<StudyPlanPage />} />
+            <Route path="/profile" element={<ProfilePage />} />
           </Route>
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
