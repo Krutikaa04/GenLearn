@@ -254,13 +254,27 @@ function DueCardsReview({ cards, onClose, onDone }: { cards: any[]; onClose: () 
   const progress = Math.round((reviewed.size / cards.length) * 100);
   const allDone = reviewed.size === cards.length;
 
-  const handleRate = async (r: number) => {
+  const handleRate = useCallback(async (r: number) => {
+    if (!card) return;
     setReviewed((s) => new Set([...s, index]));
     try {
       await flashcardsApi.reviewCard(card.setId, card.cardId, r);
     } catch { /* best-effort */ }
-    if (index < cards.length - 1) { setIndex(index + 1); setFlipped(false); }
-  };
+    setIndex((i) => (i < cards.length - 1 ? i + 1 : i));
+    setFlipped(false);
+  }, [card, index, cards.length]);
+
+  useEffect(() => {
+    if (allDone) return;
+    const ratingMap: Record<string, number> = { '1': 0, '2': 1, '3': 3, '4': 5 };
+    const onKey = (e: KeyboardEvent) => {
+      if (['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement).tagName)) return;
+      if (e.key === ' ') { e.preventDefault(); setFlipped((f) => !f); }
+      if (flipped && e.key in ratingMap) handleRate(ratingMap[e.key]);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [allDone, flipped, handleRate]);
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(6px)' }}>
