@@ -8,19 +8,19 @@ class TestProcessDocumentRequest:
         req = ProcessDocumentRequest(
             documentId="doc-1",
             studentId="student-1",
-            storagePath="/uploads/doc-1.pdf",
+            fileContent="aGVsbG8=",
             fileType="pdf",
         )
         assert req.documentId == "doc-1"
         assert req.studentId == "student-1"
-        assert req.storagePath == "/uploads/doc-1.pdf"
+        assert req.fileContent == "aGVsbG8="
         assert req.fileType == "pdf"
 
     def test_missing_document_id_raises(self):
         with pytest.raises(Exception):
-            ProcessDocumentRequest(studentId="s1", storagePath="/path", fileType="pdf")
+            ProcessDocumentRequest(studentId="s1", fileContent="aGVsbG8=", fileType="pdf")
 
-    def test_missing_storage_path_raises(self):
+    def test_missing_file_content_raises(self):
         with pytest.raises(Exception):
             ProcessDocumentRequest(documentId="d1", studentId="s1", fileType="pdf")
 
