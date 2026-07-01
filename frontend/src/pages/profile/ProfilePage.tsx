@@ -32,6 +32,7 @@ function DeleteAccountModal({ email, onClose, onConfirm, loading }: { email: str
           account but you will lose access. Type <strong>{email}</strong> to confirm.
         </p>
         <input
+          aria-label={`Type ${email} to confirm account deletion`}
           value={confirmText}
           onChange={(e) => setConfirmText(e.target.value)}
           placeholder={email}
@@ -217,8 +218,9 @@ export function ProfilePage() {
           <h2 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Learning preferences</h2>
 
           <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Preferred difficulty</label>
+            <label htmlFor="preferred-difficulty" className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Preferred difficulty</label>
             <select
+              id="preferred-difficulty"
               {...register('preferredDifficulty')}
               className="rounded-xl px-3 py-2.5 text-sm ring-1 focus:ring-2 focus:ring-[var(--brand)] focus:outline-none"
               style={{ background: 'var(--bg-surface)', color: 'var(--text-primary)' }}
@@ -231,9 +233,10 @@ export function ProfilePage() {
 
           {/* Learning goals */}
           <div className="space-y-2">
-            <label className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Learning goals</label>
+            <label htmlFor="learning-goal-input" className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Learning goals</label>
             <div className="flex gap-2">
               <input
+                id="learning-goal-input"
                 value={goalInput}
                 onChange={(e) => setGoalInput(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addGoal())}
@@ -261,9 +264,10 @@ export function ProfilePage() {
 
           {/* Interests */}
           <div className="space-y-2">
-            <label className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Interests</label>
+            <label htmlFor="interest-input" className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Interests</label>
             <div className="flex gap-2">
               <input
+                id="interest-input"
                 value={interestInput}
                 onChange={(e) => setInterestInput(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addInterest())}
