@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Layers, Plus, Trash2, Loader2, RotateCcw, ChevronLeft, ChevronRight, X, Brain } from 'lucide-react';
@@ -128,25 +128,44 @@ function FlashcardReview({ setId, onClose }: { setId: string; onClose: () => voi
   const [flipped, setFlipped] = useState(false);
   const [reviewed, setReviewed] = useState<Set<number>>(new Set());
 
-  if (isLoading) return (
-    <div className="fixed inset-0 flex items-center justify-center z-50" style={{ background: 'rgba(0,0,0,0.6)' }}>
-      <Loader2 className="w-8 h-8 animate-spin text-white" />
-    </div>
-  );
-
   const cards = data?.cards ?? [];
   const card = cards[index];
   const progress = Math.round((reviewed.size / cards.length) * 100);
 
-  const handleRate = async (r: number) => {
+  const handleRate = useCallback(async (r: number) => {
+    if (!card) return;
     setReviewed((s) => new Set([...s, index]));
     try {
       await flashcardsApi.reviewCard(setId, card.cardId, r);
     } catch {
       // fail silently — SRS update is best-effort
     }
-    if (index < cards.length - 1) { setIndex(index + 1); setFlipped(false); }
-  };
+    setIndex((i) => (i < cards.length - 1 ? i + 1 : i));
+    setFlipped(false);
+  }, [card, index, setId, cards.length]);
+
+  // Keyboard shortcuts: Space to flip, 1-4 to rate (when flipped), arrows to navigate
+  useEffect(() => {
+    if (isLoading) return;
+    const ratingMap: Record<string, number> = { '1': 0, '2': 1, '3': 3, '4': 5 };
+    const onKey = (e: KeyboardEvent) => {
+      if (['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement).tagName)) return;
+      if (e.key === ' ') { e.preventDefault(); setFlipped((f) => !f); return; }
+      if (flipped && e.key in ratingMap) { handleRate(ratingMap[e.key]); return; }
+      if (!flipped) {
+        if (e.key === 'ArrowRight') { setIndex((i) => Math.min(i + 1, cards.length - 1)); setFlipped(false); }
+        if (e.key === 'ArrowLeft') { setIndex((i) => Math.max(i - 1, 0)); setFlipped(false); }
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [isLoading, flipped, cards.length, handleRate]);
+
+  if (isLoading) return (
+    <div className="fixed inset-0 flex items-center justify-center z-50" style={{ background: 'rgba(0,0,0,0.6)' }}>
+      <Loader2 className="w-8 h-8 animate-spin text-white" />
+    </div>
+  );
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(6px)' }}>
