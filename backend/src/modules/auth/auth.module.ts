@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import { MongooseModule } from '@nestjs/mongoose';
 import { PassportModule } from '@nestjs/passport';
+import { HttpModule } from '@nestjs/axios';
 
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
@@ -28,6 +29,7 @@ import { StudentProfile, StudentProfileSchema } from './schemas/student-profile.
       { name: User.name, schema: UserSchema },
       { name: StudentProfile.name, schema: StudentProfileSchema },
     ]),
+    HttpModule.register({ timeout: 15_000 }),
   ],
   controllers: [AuthController],
   providers: [AuthService, AuthRepository, EmailService, JwtStrategy],

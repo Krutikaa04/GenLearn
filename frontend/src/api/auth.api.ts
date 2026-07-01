@@ -13,4 +13,6 @@ export const authApi = {
     api.post('/auth/reset-password', { token, newPassword }),
   verifyEmail: (token: string) => api.get(`/auth/verify-email?token=${encodeURIComponent(token)}`),
   deleteAccount: () => api.delete('/auth/me'),
+  changeEmail: (newEmail: string) => api.patch('/auth/me/email', { newEmail }),
+  confirmEmailChange: (token: string) => api.get(`/auth/confirm-email-change?token=${encodeURIComponent(token)}`),
 };

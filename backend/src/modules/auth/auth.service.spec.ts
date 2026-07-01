@@ -24,6 +24,7 @@ describe('AuthService', () => {
     findUserByRefreshTokenHash: jest.Mock;
     findUserByVerificationToken: jest.Mock;
     findUserByResetToken: jest.Mock;
+    findUserByPendingEmailToken: jest.Mock;
     findProfileByStudentId: jest.Mock;
     updateUser: jest.Mock;
     updateProfile: jest.Mock;
@@ -32,7 +33,7 @@ describe('AuthService', () => {
   };
   let jwtService: { sign: jest.Mock };
   let configService: { get: jest.Mock };
-  let emailService: { sendVerificationEmail: jest.Mock; sendPasswordResetEmail: jest.Mock };
+  let emailService: { sendVerificationEmail: jest.Mock; sendPasswordResetEmail: jest.Mock; sendEmailChangeConfirmation: jest.Mock };
 
   const makeUser = (overrides: Partial<any> = {}) => ({
     userId: 'user-1',
@@ -57,6 +58,7 @@ describe('AuthService', () => {
       findUserByRefreshTokenHash: jest.fn(),
       findUserByVerificationToken: jest.fn(),
       findUserByResetToken: jest.fn(),
+      findUserByPendingEmailToken: jest.fn(),
       findProfileByStudentId: jest.fn().mockResolvedValue(null),
       updateUser: jest.fn().mockResolvedValue({}),
       updateProfile: jest.fn().mockResolvedValue({}),
@@ -68,6 +70,7 @@ describe('AuthService', () => {
     emailService = {
       sendVerificationEmail: jest.fn().mockResolvedValue(undefined),
       sendPasswordResetEmail: jest.fn().mockResolvedValue(undefined),
+      sendEmailChangeConfirmation: jest.fn().mockResolvedValue(undefined),
     };
     bcryptHash.mockResolvedValue('hashed');
     bcryptCompare.mockResolvedValue(true);
@@ -265,6 +268,67 @@ describe('AuthService', () => {
         passwordResetToken: null,
         refreshTokens: [],
       }));
+    });
+  });
+
+  // ─── requestEmailChange / confirmEmailChange ───────────────────────────────
+
+  describe('requestEmailChange', () => {
+    it('throws NotFoundException when the user does not exist', async () => {
+      repository.findUserById.mockResolvedValue(null);
+      await expect(service.requestEmailChange('user-1', 'new@test.com')).rejects.toThrow(NotFoundException);
+    });
+
+    it('throws ConflictException when the new email matches the current one', async () => {
+      repository.findUserById.mockResolvedValue(makeUser({ email: 'same@test.com' }));
+      await expect(service.requestEmailChange('user-1', 'same@test.com')).rejects.toThrow(ConflictException);
+    });
+
+    it('throws ConflictException when the new email is already registered', async () => {
+      repository.findUserById.mockResolvedValue(makeUser());
+      repository.emailExists.mockResolvedValue(true);
+      await expect(service.requestEmailChange('user-1', 'taken@test.com')).rejects.toThrow(ConflictException);
+    });
+
+    it('stores a pending email and token, and sends a confirmation email', async () => {
+      repository.findUserById.mockResolvedValue(makeUser());
+      repository.emailExists.mockResolvedValue(false);
+
+      await service.requestEmailChange('user-1', 'NEW@Test.com');
+
+      expect(repository.updateUser).toHaveBeenCalledWith('user-1', expect.objectContaining({
+        pendingEmail: 'new@test.com',
+        pendingEmailToken: expect.any(String),
+      }));
+      expect(emailService.sendEmailChangeConfirmation).toHaveBeenCalledWith(
+        'new@test.com', 'Alice', expect.any(String),
+      );
+    });
+  });
+
+  describe('confirmEmailChange', () => {
+    it('throws UnauthorizedException for an invalid token', async () => {
+      repository.findUserByPendingEmailToken.mockResolvedValue(null);
+      await expect(service.confirmEmailChange('bad-token')).rejects.toThrow(UnauthorizedException);
+    });
+
+    it('throws ConflictException if the pending email was taken in the meantime', async () => {
+      repository.findUserByPendingEmailToken.mockResolvedValue(makeUser({ pendingEmail: 'new@test.com' }));
+      repository.emailExists.mockResolvedValue(true);
+      await expect(service.confirmEmailChange('valid-token')).rejects.toThrow(ConflictException);
+    });
+
+    it('swaps email and clears pending fields on success', async () => {
+      repository.findUserByPendingEmailToken.mockResolvedValue(makeUser({ pendingEmail: 'new@test.com' }));
+      repository.emailExists.mockResolvedValue(false);
+
+      await service.confirmEmailChange('valid-token');
+
+      expect(repository.updateUser).toHaveBeenCalledWith('user-1', {
+        email: 'new@test.com',
+        pendingEmail: null,
+        pendingEmailToken: null,
+      });
     });
   });
 

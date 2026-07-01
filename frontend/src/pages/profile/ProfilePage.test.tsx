@@ -24,7 +24,7 @@ vi.mock('../../lib/axios', () => {
 });
 
 vi.mock('../../api/auth.api', () => ({
-  authApi: { deleteAccount: vi.fn() },
+  authApi: { deleteAccount: vi.fn(), changeEmail: vi.fn() },
 }));
 
 import api from '../../lib/axios';
@@ -267,6 +267,54 @@ describe('ProfilePage', () => {
       await waitFor(() => {
         expect(screen.queryByText('Delete your account?')).not.toBeInTheDocument();
       });
+    });
+  });
+
+  describe('email change', () => {
+    it('renders the current email pre-filled in the New email field', async () => {
+      renderPage();
+      await waitFor(() => screen.getByDisplayValue('Alice'));
+      expect(screen.getByLabelText('New email')).toHaveValue('alice@example.com');
+    });
+
+    it('disables Change email when the input matches the current email', async () => {
+      renderPage();
+      await waitFor(() => screen.getByDisplayValue('Alice'));
+      expect(screen.getByRole('button', { name: 'Change email' })).toBeDisabled();
+    });
+
+    it('enables Change email once a different address is typed', async () => {
+      renderPage();
+      await waitFor(() => screen.getByDisplayValue('Alice'));
+      fireEvent.change(screen.getByLabelText('New email'), { target: { value: 'new@example.com' } });
+      expect(screen.getByRole('button', { name: 'Change email' })).not.toBeDisabled();
+    });
+
+    it('calls authApi.changeEmail and shows a pending-confirmation message on success', async () => {
+      (authApi.changeEmail as any).mockResolvedValue({});
+      renderPage();
+      await waitFor(() => screen.getByDisplayValue('Alice'));
+      fireEvent.change(screen.getByLabelText('New email'), { target: { value: 'new@example.com' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Change email' }));
+      await waitFor(() => {
+        expect(authApi.changeEmail).toHaveBeenCalledWith('new@example.com');
+      });
+      expect(await screen.findByText(/Check/)).toBeInTheDocument();
+      expect(screen.getByText('new@example.com')).toBeInTheDocument();
+    });
+
+    it('shows an error toast when the request fails', async () => {
+      (authApi.changeEmail as any).mockRejectedValue({
+        response: { data: { error: { message: 'Email already registered' } } },
+      });
+      renderPage();
+      await waitFor(() => screen.getByDisplayValue('Alice'));
+      fireEvent.change(screen.getByLabelText('New email'), { target: { value: 'taken@example.com' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Change email' }));
+      await waitFor(() => {
+        expect(toast.error).toHaveBeenCalledWith('Email already registered');
+      });
+      expect(screen.queryByText(/Check/)).not.toBeInTheDocument();
     });
   });
 });

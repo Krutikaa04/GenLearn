@@ -23,6 +23,7 @@ import { LoginDto } from './dto/login.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
+import { ChangeEmailDto } from './dto/change-email.dto';
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -131,5 +132,25 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ) {
     await this.authService.deleteAccount(user.userId, res);
+  }
+
+  @Patch('me/email')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Request an email address change — sends a confirmation link to the new address' })
+  async changeEmail(
+    @CurrentUser() user: JwtPayload,
+    @Body() dto: ChangeEmailDto,
+  ) {
+    await this.authService.requestEmailChange(user.userId, dto.newEmail);
+    return { data: { message: 'Check your new email address to confirm the change' } };
+  }
+
+  @Public()
+  @Get('confirm-email-change')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Confirm a pending email change via token from email link' })
+  async confirmEmailChange(@Query('token') token: string) {
+    await this.authService.confirmEmailChange(token);
+    return { data: { message: 'Email address updated successfully' } };
   }
 }

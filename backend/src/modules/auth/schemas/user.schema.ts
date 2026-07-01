@@ -53,6 +53,12 @@ export class User {
   @Prop({ type: Date, default: null, select: false })
   passwordResetExpiry: Date | null;
 
+  @Prop({ type: String, default: null, lowercase: true, trim: true })
+  pendingEmail: string | null;
+
+  @Prop({ type: String, default: null, select: false })
+  pendingEmailToken: string | null;
+
   @Prop({
     type: [
       {

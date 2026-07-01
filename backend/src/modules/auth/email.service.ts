@@ -1,24 +1,21 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import * as nodemailer from 'nodemailer';
+import { HttpService } from '@nestjs/axios';
+import { firstValueFrom } from 'rxjs';
+import type { AxiosError } from 'axios';
 
 @Injectable()
 export class EmailService {
   private readonly logger = new Logger(EmailService.name);
-  private transporter: nodemailer.Transporter | null = null;
+  private readonly apiKey: string | undefined;
 
-  constructor(private readonly configService: ConfigService) {
-    const host = this.configService.get<string>('SMTP_HOST');
-    if (host) {
-      this.transporter = nodemailer.createTransport({
-        host,
-        port: this.configService.get<number>('SMTP_PORT') || 587,
-        auth: {
-          user: this.configService.get<string>('SMTP_USER'),
-          pass: this.configService.get<string>('SMTP_PASSWORD'),
-        },
-      });
-    }
+  constructor(
+    private readonly configService: ConfigService,
+    private readonly httpService: HttpService,
+  ) {
+    // Resend's HTTP API is used instead of SMTP: many PaaS hosts (Railway included)
+    // block outbound SMTP ports entirely, but regular HTTPS always works.
+    this.apiKey = this.configService.get<string>('SMTP_PASSWORD');
   }
 
   async sendVerificationEmail(email: string, firstName: string, token: string): Promise<void> {
@@ -46,22 +43,42 @@ export class EmailService {
     `);
   }
 
+  async sendEmailChangeConfirmation(newEmail: string, firstName: string, token: string): Promise<void> {
+    const frontendUrl = this.configService.get<string>('FRONTEND_URL') || 'http://localhost:5173';
+    const link = `${frontendUrl}/confirm-email-change?token=${token}`;
+
+    await this.send(newEmail, 'Confirm your new GenLearn email address', `
+      <h2>Hi ${firstName},</h2>
+      <p>We received a request to change the email address on your GenLearn account to this one.</p>
+      <p>Click the link below to confirm. This link expires in 24 hours.</p>
+      <a href="${link}" style="background:#6366f1;color:#fff;padding:12px 24px;text-decoration:none;border-radius:6px;display:inline-block;margin-top:12px;">Confirm new email</a>
+      <p style="margin-top:16px;color:#666;">If you didn't request this, you can safely ignore this email — your account email will not change.</p>
+    `);
+  }
+
   private async send(to: string, subject: string, html: string): Promise<void> {
-    if (!this.transporter) {
+    if (!this.apiKey) {
       this.logger.warn(`Email not configured — skipping send to ${to}: ${subject}`);
       return;
     }
 
     try {
-      await this.transporter.sendMail({
-        from: this.configService.get<string>('SMTP_FROM') || 'noreply@genlearn.dev',
-        to,
-        subject,
-        html,
-      });
+      await firstValueFrom(
+        this.httpService.post(
+          'https://api.resend.com/emails',
+          {
+            from: this.configService.get<string>('SMTP_FROM') || 'onboarding@resend.dev',
+            to,
+            subject,
+            html,
+          },
+          { headers: { Authorization: `Bearer ${this.apiKey}` } },
+        ),
+      );
     } catch (error) {
       // Don't let email failures break the request
-      this.logger.error(`Failed to send email to ${to}`, error);
+      const axiosErr = error as AxiosError;
+      this.logger.error(`Failed to send email to ${to}`, axiosErr.response?.data ?? axiosErr.message);
     }
   }
 }
