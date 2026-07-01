@@ -1,0 +1,39 @@
+name: Feature / Improvement
+description: Propose a new feature, enhancement, or polish item
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem / motivation
+      description: What's missing or rough right now? Why does it matter?
+    validations:
+      required: true
+  - type: textarea
+    id: approach
+    attributes:
+      label: Proposed approach
+      description: How should this be solved? Reference existing files/patterns if relevant.
+    validations:
+      required: false
+  - type: dropdown
+    id: area
+    attributes:
+      label: Affected area
+      options:
+        - frontend
+        - backend
+        - ai-service
+        - infra
+    validations:
+      required: true
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      options:
+        - high
+        - medium
+        - low
+    validations:
+      required: true
