@@ -9,6 +9,7 @@ import { lessonsApi } from '../../api/lessons.api';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
+import { useModalA11y } from '../../components/ui/useModalA11y';
 
 const statusColor: Record<string, any> = { pending: 'gray', generating: 'yellow', ready: 'green', failed: 'red' };
 
@@ -35,9 +36,11 @@ function GenerateModal({ onClose, initialDocId = '' }: { onClose: () => void; in
     onError: (err: any) => toast.error(err.response?.data?.error?.message || 'Failed'),
   });
 
+  const panelRef = useModalA11y(onClose);
+
   return (
-    <div className="fixed inset-0 flex items-center justify-center p-4 z-50" style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}>
-      <div className="w-full max-w-md rounded-2xl border p-6 space-y-5" style={{ background: 'var(--bg-surface)', borderColor: 'var(--border)' }}>
+    <div className="fixed inset-0 flex items-center justify-center p-4 z-50" style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }} onClick={onClose}>
+      <div ref={panelRef} onClick={(e) => e.stopPropagation()} className="w-full max-w-md rounded-2xl border p-6 space-y-5" style={{ background: 'var(--bg-surface)', borderColor: 'var(--border)' }}>
         <div className="flex items-center justify-between">
           <div>
             <h3 className="font-semibold" style={{ color: 'var(--text-primary)' }}>Generate Flashcards</h3>
@@ -173,6 +176,8 @@ function FlashcardReview({ setId, onClose }: { setId: string; onClose: () => voi
     return () => window.removeEventListener('keydown', onKey);
   }, [isLoading, flipped, cards.length, handleRate]);
 
+  const panelRef = useModalA11y(onClose);
+
   if (isLoading) return (
     <div className="fixed inset-0 flex items-center justify-center z-50" style={{ background: 'rgba(0,0,0,0.6)' }}>
       <Loader2 className="w-8 h-8 animate-spin text-white" />
@@ -181,7 +186,7 @@ function FlashcardReview({ setId, onClose }: { setId: string; onClose: () => voi
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(6px)' }}>
-      <div className="w-full max-w-lg space-y-4">
+      <div ref={panelRef} className="w-full max-w-lg space-y-4">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -288,9 +293,11 @@ function DueCardsReview({ cards, onClose, onDone }: { cards: any[]; onClose: () 
     return () => window.removeEventListener('keydown', onKey);
   }, [allDone, flipped, handleRate]);
 
+  const panelRef = useModalA11y(onClose);
+
   return (
     <div className="fixed inset-0 z-50 flex flex-col items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(6px)' }}>
-      <div className="w-full max-w-lg space-y-4">
+      <div ref={panelRef} className="w-full max-w-lg space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <span className="text-white/70 text-sm">{Math.min(index + 1, cards.length)} / {cards.length}</span>

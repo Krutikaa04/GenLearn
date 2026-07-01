@@ -146,6 +146,45 @@ describe('DocumentsPage', () => {
     });
   });
 
+  it('closes ask modal on Escape key', async () => {
+    (documentsApi.list as any).mockResolvedValue({ data: { data: [mockReadyDoc] } });
+    render(<DocumentsPage />, { wrapper: wrapper() });
+    await screen.findByText('lecture-notes.pdf');
+    fireEvent.click(document.querySelector('button[title="Ask a question"]') as HTMLButtonElement);
+    await screen.findByText('Ask about this document');
+    fireEvent.keyDown(document, { key: 'Escape' });
+    await waitFor(() => {
+      expect(screen.queryByText('Ask about this document')).not.toBeInTheDocument();
+    });
+  });
+
+  it('confirms before closing on backdrop click when a question is typed', async () => {
+    (documentsApi.list as any).mockResolvedValue({ data: { data: [mockReadyDoc] } });
+    vi.spyOn(window, 'confirm').mockReturnValue(false);
+    render(<DocumentsPage />, { wrapper: wrapper() });
+    await screen.findByText('lecture-notes.pdf');
+    fireEvent.click(document.querySelector('button[title="Ask a question"]') as HTMLButtonElement);
+    await screen.findByText('Ask about this document');
+    fireEvent.change(screen.getByPlaceholderText('Ask a question…'), { target: { value: 'Unsent question' } });
+    const backdrop = document.querySelector('.fixed.inset-0') as HTMLElement;
+    fireEvent.click(backdrop);
+    expect(window.confirm).toHaveBeenCalledWith('Discard your unsent question?');
+    expect(screen.getByText('Ask about this document')).toBeInTheDocument();
+  });
+
+  it('closes on backdrop click without confirm when no question is typed', async () => {
+    (documentsApi.list as any).mockResolvedValue({ data: { data: [mockReadyDoc] } });
+    render(<DocumentsPage />, { wrapper: wrapper() });
+    await screen.findByText('lecture-notes.pdf');
+    fireEvent.click(document.querySelector('button[title="Ask a question"]') as HTMLButtonElement);
+    await screen.findByText('Ask about this document');
+    const backdrop = document.querySelector('.fixed.inset-0') as HTMLElement;
+    fireEvent.click(backdrop);
+    await waitFor(() => {
+      expect(screen.queryByText('Ask about this document')).not.toBeInTheDocument();
+    });
+  });
+
   it('sends question in ask modal and shows answer', async () => {
     (documentsApi.list as any).mockResolvedValue({ data: { data: [mockReadyDoc] } });
     (documentsApi.ask as any).mockResolvedValue({ data: { data: { answer: 'Binary search runs in O(log n).' } } });

@@ -10,6 +10,7 @@ import { Card } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
 import { Input } from '../../components/ui/Input';
 import { MarkdownContent } from '../../components/ui/MarkdownContent';
+import { useModalA11y } from '../../components/ui/useModalA11y';
 
 const statusColor: Record<string, any> = { pending: 'gray', generating: 'yellow', ready: 'green', failed: 'red' };
 
@@ -19,6 +20,7 @@ function GenerateModal({ onClose, defaultTopic = '', defaultDocId = '' }: { onCl
   const [difficulty, setDifficulty] = useState('beginner');
   const [selectedDocIds, setSelectedDocIds] = useState<string[]>(defaultDocId ? [defaultDocId] : []);
   const [docPanelOpen, setDocPanelOpen] = useState(!!defaultDocId);
+  const panelRef = useModalA11y(onClose);
 
   const { data: docs = [] } = useQuery({
     queryKey: ['documents'],
@@ -36,8 +38,8 @@ function GenerateModal({ onClose, defaultTopic = '', defaultDocId = '' }: { onCl
   });
 
   return (
-    <div className="fixed inset-0 flex items-center justify-center p-4 z-50" style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}>
-      <div className="w-full max-w-md rounded-2xl border p-6 space-y-5" style={{ background: 'var(--bg-surface)', borderColor: 'var(--border)' }}>
+    <div className="fixed inset-0 flex items-center justify-center p-4 z-50" style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }} onClick={onClose}>
+      <div ref={panelRef} onClick={(e) => e.stopPropagation()} className="w-full max-w-md rounded-2xl border p-6 space-y-5" style={{ background: 'var(--bg-surface)', borderColor: 'var(--border)' }}>
         <div className="flex items-center justify-between">
           <div>
             <h3 className="font-semibold" style={{ color: 'var(--text-primary)' }}>Generate Lesson</h3>

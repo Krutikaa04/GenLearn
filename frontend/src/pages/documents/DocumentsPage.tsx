@@ -7,6 +7,7 @@ import { documentsApi } from '../../api/documents.api';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
+import { useModalA11y } from '../../components/ui/useModalA11y';
 
 const statusColor: Record<string, any> = {
   uploaded: 'blue', processing: 'yellow', embedding: 'yellow', ready: 'green', failed: 'red',
@@ -16,6 +17,12 @@ function AskModal({ docId, docName, onClose }: { docId: string; docName: string;
   const [question, setQuestion] = useState('');
   const [messages, setMessages] = useState<{ role: 'user' | 'ai'; text: string }[]>([]);
   const [loading, setLoading] = useState(false);
+
+  const closeWithConfirm = () => {
+    if (question.trim() && !confirm('Discard your unsent question?')) return;
+    onClose();
+  };
+  const panelRef = useModalA11y(closeWithConfirm);
 
   const ask = async () => {
     if (!question.trim()) return;
@@ -34,14 +41,23 @@ function AskModal({ docId, docName, onClose }: { docId: string; docName: string;
   };
 
   return (
-    <div className="fixed inset-0 flex items-center justify-center p-4 z-50" style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}>
-      <div className="w-full max-w-lg rounded-2xl border flex flex-col" style={{ background: 'var(--bg-surface)', borderColor: 'var(--border)', maxHeight: '80vh' }}>
+    <div
+      className="fixed inset-0 flex items-center justify-center p-4 z-50"
+      style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}
+      onClick={closeWithConfirm}
+    >
+      <div
+        ref={panelRef}
+        onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-lg rounded-2xl border flex flex-col"
+        style={{ background: 'var(--bg-surface)', borderColor: 'var(--border)', maxHeight: '80vh' }}
+      >
         <div className="flex items-center justify-between p-5 border-b" style={{ borderColor: 'var(--border)' }}>
           <div>
             <h3 className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>Ask about this document</h3>
             <p className="text-xs mt-0.5 truncate max-w-xs" style={{ color: 'var(--text-muted)' }}>{docName}</p>
           </div>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-[var(--bg-subtle)]" style={{ color: 'var(--text-muted)' }}>
+          <button onClick={closeWithConfirm} className="p-1.5 rounded-lg hover:bg-[var(--bg-subtle)]" style={{ color: 'var(--text-muted)' }}>
             <X className="w-4 h-4" />
           </button>
         </div>
