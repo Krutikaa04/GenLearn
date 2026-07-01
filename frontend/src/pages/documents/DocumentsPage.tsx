@@ -9,6 +9,7 @@ import { Card } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
 import { useModalA11y } from '../../components/ui/useModalA11y';
 import { usePaginatedList } from '../../hooks/usePaginatedList';
+import { ErrorBoundary } from '../../components/ErrorBoundary';
 
 const statusColor: Record<string, any> = {
   uploaded: 'blue', processing: 'yellow', embedding: 'yellow', ready: 'green', failed: 'red',
@@ -47,6 +48,7 @@ function AskModal({ docId, docName, onClose }: { docId: string; docName: string;
       style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}
       onClick={closeWithConfirm}
     >
+      <ErrorBoundary compact>
       <div
         ref={panelRef}
         onClick={(e) => e.stopPropagation()}
@@ -106,6 +108,7 @@ function AskModal({ docId, docName, onClose }: { docId: string; docName: string;
           </Button>
         </div>
       </div>
+      </ErrorBoundary>
     </div>
   );
 }

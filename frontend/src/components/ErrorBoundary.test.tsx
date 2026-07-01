@@ -56,4 +56,24 @@ describe('ErrorBoundary', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Reload page' }));
     expect(reloadMock).toHaveBeenCalledOnce();
   });
+
+  it('renders a min-h-screen fallback by default (top-level app boundary)', () => {
+    render(
+      <ErrorBoundary>
+        <Bomb shouldThrow />
+      </ErrorBoundary>,
+    );
+    expect(screen.getByText('Something went wrong').closest('div')).toHaveClass('min-h-screen');
+  });
+
+  it('renders a compact, non-viewport-filling fallback when compact is set', () => {
+    render(
+      <ErrorBoundary compact>
+        <Bomb shouldThrow />
+      </ErrorBoundary>,
+    );
+    const fallback = screen.getByText('Something went wrong').closest('div');
+    expect(fallback).not.toHaveClass('min-h-screen');
+    expect(fallback).toHaveClass('rounded-2xl');
+  });
 });

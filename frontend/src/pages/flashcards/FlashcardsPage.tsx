@@ -10,6 +10,7 @@ import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
 import { useModalA11y } from '../../components/ui/useModalA11y';
+import { ErrorBoundary } from '../../components/ErrorBoundary';
 
 const statusColor: Record<string, any> = { pending: 'gray', generating: 'yellow', ready: 'green', failed: 'red' };
 
@@ -40,6 +41,7 @@ function GenerateModal({ onClose, initialDocId = '' }: { onClose: () => void; in
 
   return (
     <div className="fixed inset-0 flex items-center justify-center p-4 z-50" style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }} onClick={onClose}>
+      <ErrorBoundary compact>
       <div ref={panelRef} onClick={(e) => e.stopPropagation()} className="w-full max-w-md rounded-2xl border p-6 space-y-5" style={{ background: 'var(--bg-surface)', borderColor: 'var(--border)' }}>
         <div className="flex items-center justify-between">
           <div>
@@ -122,6 +124,7 @@ function GenerateModal({ onClose, initialDocId = '' }: { onClose: () => void; in
           <Button onClick={() => mutation.mutate()} loading={mutation.isPending} disabled={!sourceId} className="flex-1">Generate</Button>
         </div>
       </div>
+      </ErrorBoundary>
     </div>
   );
 }
@@ -186,6 +189,7 @@ function FlashcardReview({ setId, onClose }: { setId: string; onClose: () => voi
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(6px)' }}>
+      <ErrorBoundary compact>
       <div ref={panelRef} className="w-full max-w-lg space-y-4">
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -258,6 +262,7 @@ function FlashcardReview({ setId, onClose }: { setId: string; onClose: () => voi
           Rate how well you knew it — GenLearn schedules the next review automatically
         </p>
       </div>
+      </ErrorBoundary>
     </div>
   );
 }
@@ -297,6 +302,7 @@ function DueCardsReview({ cards, onClose, onDone }: { cards: any[]; onClose: () 
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(6px)' }}>
+      <ErrorBoundary compact>
       <div ref={panelRef} className="w-full max-w-lg space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -349,6 +355,7 @@ function DueCardsReview({ cards, onClose, onDone }: { cards: any[]; onClose: () 
           </>
         )}
       </div>
+      </ErrorBoundary>
     </div>
   );
 }

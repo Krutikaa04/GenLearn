@@ -11,6 +11,7 @@ import { Card } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
 import { Input } from '../../components/ui/Input';
 import { useModalA11y } from '../../components/ui/useModalA11y';
+import { ErrorBoundary } from '../../components/ErrorBoundary';
 import { usePaginatedList } from '../../hooks/usePaginatedList';
 
 const statusColor: Record<string, any> = { pending: 'gray', generating: 'yellow', ready: 'green', failed: 'red' };
@@ -58,6 +59,7 @@ function GenerateModal({ onClose, defaultTopic = '', defaultDocId = '' }: { onCl
 
   return (
     <div className="fixed inset-0 flex items-center justify-center p-4 z-50" style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }} onClick={onClose}>
+      <ErrorBoundary compact>
       <div ref={panelRef} onClick={(e) => e.stopPropagation()} className="w-full max-w-md rounded-2xl border p-6 space-y-5 max-h-[90vh] overflow-y-auto" style={{ background: 'var(--bg-surface)', borderColor: 'var(--border)' }}>
         <div className="flex items-center justify-between">
           <div>
@@ -186,6 +188,7 @@ function GenerateModal({ onClose, defaultTopic = '', defaultDocId = '' }: { onCl
           <Button onClick={() => mutation.mutate()} loading={mutation.isPending} disabled={!canGenerate} className="flex-1">Generate</Button>
         </div>
       </div>
+      </ErrorBoundary>
     </div>
   );
 }
@@ -244,6 +247,7 @@ function ReviewModal({ quizId, onClose }: { quizId: string; onClose: () => void 
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }} onClick={onClose}>
+      <ErrorBoundary compact>
       <div ref={panelRef} onClick={(e) => e.stopPropagation()} className="w-full max-w-xl rounded-2xl border" style={{ background: 'var(--bg-surface)', borderColor: 'var(--border)' }}>
         <div className="flex items-center justify-between p-5 border-b" style={{ borderColor: 'var(--border)' }}>
           <div>
@@ -302,6 +306,7 @@ function ReviewModal({ quizId, onClose }: { quizId: string; onClose: () => void 
           <Button onClick={onClose} className="w-full">Close</Button>
         </div>
       </div>
+      </ErrorBoundary>
     </div>
   );
 }
@@ -418,6 +423,7 @@ function QuizTaker({ quizId, onClose }: { quizId: string; onClose: () => void })
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}>
+      <ErrorBoundary compact>
       <div ref={panelRef} className="w-full max-w-xl rounded-2xl border" style={{ background: 'var(--bg-surface)', borderColor: 'var(--border)' }}>
         {/* Header */}
         <div className="flex items-center justify-between p-5 border-b" style={{ borderColor: 'var(--border)' }}>
@@ -542,6 +548,7 @@ function QuizTaker({ quizId, onClose }: { quizId: string; onClose: () => void })
           </div>
         )}
       </div>
+      </ErrorBoundary>
     </div>
   );
 }

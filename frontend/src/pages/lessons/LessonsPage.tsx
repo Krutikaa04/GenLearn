@@ -12,6 +12,7 @@ import { Input } from '../../components/ui/Input';
 import { MarkdownContent } from '../../components/ui/MarkdownContent';
 import { useModalA11y } from '../../components/ui/useModalA11y';
 import { usePaginatedList } from '../../hooks/usePaginatedList';
+import { ErrorBoundary } from '../../components/ErrorBoundary';
 
 const statusColor: Record<string, any> = { pending: 'gray', generating: 'yellow', ready: 'green', failed: 'red' };
 
@@ -40,6 +41,7 @@ function GenerateModal({ onClose, defaultTopic = '', defaultDocId = '' }: { onCl
 
   return (
     <div className="fixed inset-0 flex items-center justify-center p-4 z-50" style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }} onClick={onClose}>
+      <ErrorBoundary compact>
       <div ref={panelRef} onClick={(e) => e.stopPropagation()} className="w-full max-w-md rounded-2xl border p-6 space-y-5" style={{ background: 'var(--bg-surface)', borderColor: 'var(--border)' }}>
         <div className="flex items-center justify-between">
           <div>
@@ -104,6 +106,7 @@ function GenerateModal({ onClose, defaultTopic = '', defaultDocId = '' }: { onCl
           <Button onClick={() => mutation.mutate()} loading={mutation.isPending} disabled={!topic.trim()} className="flex-1">Generate</Button>
         </div>
       </div>
+      </ErrorBoundary>
     </div>
   );
 }
