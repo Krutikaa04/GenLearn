@@ -13,4 +13,9 @@ def get_client() -> AsyncIOMotorClient:
 
 
 def get_db():
-    return get_client()["genlearn"]
+    # Use the database name embedded in MONGODB_URI itself rather than a hardcoded
+    # name, so this always matches whatever database the backend's DATABASE_URL
+    # points at — MongoDB database names are case-sensitive and Atlas rejects two
+    # databases differing only in case, which a mismatched hardcoded name here
+    # triggered in production.
+    return get_client().get_default_database()
