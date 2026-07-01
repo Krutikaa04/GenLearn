@@ -105,6 +105,17 @@ describe('AuthService', () => {
       expect(repository.createProfile).toHaveBeenCalledTimes(1);
     });
 
+    it('auto-verifies new accounts (verification gate temporarily disabled — see #20)', async () => {
+      repository.createUser.mockResolvedValue(makeUser());
+
+      await service.register({ email: 'new@example.com', password: 'password123', firstName: 'Bob', lastName: 'Jones' } as any);
+
+      expect(repository.createUser).toHaveBeenCalledWith(expect.objectContaining({
+        emailVerified: true,
+        status: UserStatus.ACTIVE,
+      }));
+    });
+
     it('normalises the email to lowercase', async () => {
       repository.createUser.mockResolvedValue(makeUser());
 
@@ -152,11 +163,12 @@ describe('AuthService', () => {
         .rejects.toThrow(ForbiddenException);
     });
 
-    it('throws ForbiddenException when email is not yet verified', async () => {
+    it('allows login for an unverified account (verification gate temporarily disabled — see #20)', async () => {
       repository.findUserByEmail.mockResolvedValue(makeUser({ emailVerified: false }));
 
-      await expect(service.login({ email: 'test@example.com', password: 'pw' } as any, mockRes))
-        .rejects.toThrow(ForbiddenException);
+      const result = await service.login({ email: 'test@example.com', password: 'pw' } as any, mockRes);
+
+      expect(result.accessToken).toBe('access-token');
     });
 
     it('returns an access token and user on successful login', async () => {
