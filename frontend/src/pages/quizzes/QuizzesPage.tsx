@@ -10,6 +10,7 @@ import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
 import { Input } from '../../components/ui/Input';
+import { useModalA11y } from '../../components/ui/useModalA11y';
 
 const statusColor: Record<string, any> = { pending: 'gray', generating: 'yellow', ready: 'green', failed: 'red' };
 
@@ -52,10 +53,11 @@ function GenerateModal({ onClose, defaultTopic = '', defaultDocId = '' }: { onCl
   };
 
   const canGenerate = mode === 'normal' ? !!topic.trim() : challengeTopics.length > 0;
+  const panelRef = useModalA11y(onClose);
 
   return (
-    <div className="fixed inset-0 flex items-center justify-center p-4 z-50" style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}>
-      <div className="w-full max-w-md rounded-2xl border p-6 space-y-5 max-h-[90vh] overflow-y-auto" style={{ background: 'var(--bg-surface)', borderColor: 'var(--border)' }}>
+    <div className="fixed inset-0 flex items-center justify-center p-4 z-50" style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }} onClick={onClose}>
+      <div ref={panelRef} onClick={(e) => e.stopPropagation()} className="w-full max-w-md rounded-2xl border p-6 space-y-5 max-h-[90vh] overflow-y-auto" style={{ background: 'var(--bg-surface)', borderColor: 'var(--border)' }}>
         <div className="flex items-center justify-between">
           <div>
             <h3 className="font-semibold" style={{ color: 'var(--text-primary)' }}>Generate Quiz</h3>
@@ -237,10 +239,11 @@ function ReviewModal({ quizId, onClose }: { quizId: string; onClose: () => void 
     queryKey: ['quiz-review', quizId],
     queryFn: () => quizzesApi.reviewQuiz(quizId).then((r) => r.data.data),
   });
+  const panelRef = useModalA11y(onClose);
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}>
-      <div className="w-full max-w-xl rounded-2xl border" style={{ background: 'var(--bg-surface)', borderColor: 'var(--border)' }}>
+    <div className="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }} onClick={onClose}>
+      <div ref={panelRef} onClick={(e) => e.stopPropagation()} className="w-full max-w-xl rounded-2xl border" style={{ background: 'var(--bg-surface)', borderColor: 'var(--border)' }}>
         <div className="flex items-center justify-between p-5 border-b" style={{ borderColor: 'var(--border)' }}>
           <div>
             <h3 className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>Quiz Results</h3>
@@ -396,6 +399,8 @@ function QuizTaker({ quizId, onClose }: { quizId: string; onClose: () => void })
     return () => window.removeEventListener('keydown', onKey);
   }, [result, current, answers, isChallenge, quiz?.questions]);
 
+  const panelRef = useModalA11y(onClose);
+
   if (isLoading) return (
     <div className="fixed inset-0 flex items-center justify-center z-50" style={{ background: 'rgba(0,0,0,0.6)' }}>
       <Loader2 className="w-8 h-8 animate-spin text-white" />
@@ -412,7 +417,7 @@ function QuizTaker({ quizId, onClose }: { quizId: string; onClose: () => void })
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}>
-      <div className="w-full max-w-xl rounded-2xl border" style={{ background: 'var(--bg-surface)', borderColor: 'var(--border)' }}>
+      <div ref={panelRef} className="w-full max-w-xl rounded-2xl border" style={{ background: 'var(--bg-surface)', borderColor: 'var(--border)' }}>
         {/* Header */}
         <div className="flex items-center justify-between p-5 border-b" style={{ borderColor: 'var(--border)' }}>
           <div>
