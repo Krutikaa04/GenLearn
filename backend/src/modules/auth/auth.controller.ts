@@ -89,6 +89,16 @@ export class AuthController {
 
   @Public()
   @Throttle({ default: { ttl: 60000, limit: 3 } })
+  @Post('resend-verification')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Resend the signup email-verification link' })
+  async resendVerification(@Body() dto: ForgotPasswordDto) {
+    await this.authService.resendVerification(dto.email);
+    return { data: { message: 'If that email exists and is unverified, a new verification link has been sent' } };
+  }
+
+  @Public()
+  @Throttle({ default: { ttl: 60000, limit: 3 } })
   @Post('forgot-password')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Request a password reset email' })

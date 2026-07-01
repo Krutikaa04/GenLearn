@@ -44,6 +44,7 @@ describe('AuthController', () => {
             deleteAccount: jest.fn(),
             requestEmailChange: jest.fn(),
             confirmEmailChange: jest.fn(),
+            resendVerification: jest.fn(),
           },
         },
       ],
@@ -127,6 +128,15 @@ describe('AuthController', () => {
       const result = await controller.verifyEmail('verify-token-123');
       expect(service.verifyEmail).toHaveBeenCalledWith('verify-token-123');
       expect(result).toEqual({ data: { message: 'Email verified successfully' } });
+    });
+  });
+
+  describe('resendVerification', () => {
+    it('calls service and returns silent success message', async () => {
+      service.resendVerification.mockResolvedValue(undefined);
+      const result = await controller.resendVerification({ email: 'alice@test.com' } as any);
+      expect(service.resendVerification).toHaveBeenCalledWith('alice@test.com');
+      expect(result.data.message).toMatch(/verification link/i);
     });
   });
 
