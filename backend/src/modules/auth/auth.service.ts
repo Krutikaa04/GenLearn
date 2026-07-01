@@ -70,12 +70,29 @@ export class AuthService {
   async login(dto: LoginDto, res: { cookie: Function }) {
     const user = await this.authRepository.findUserByEmail(dto.email);
 
-    if (!user || !(await bcrypt.compare(dto.password, user.passwordHash))) {
+    if (!user) {
+      throw new UnauthorizedException({ code: 'INVALID_CREDENTIALS', message: 'Invalid email or password' });
+    }
+
+    if (user.lockedUntil && user.lockedUntil > new Date()) {
+      const minutesLeft = Math.ceil((user.lockedUntil.getTime() - Date.now()) / 60000);
+      throw new ForbiddenException({
+        code: 'ACCOUNT_LOCKED',
+        message: `Too many failed login attempts. Try again in ${minutesLeft} minute${minutesLeft === 1 ? '' : 's'}.`,
+      });
+    }
+
+    if (!(await bcrypt.compare(dto.password, user.passwordHash))) {
+      await this.registerFailedLogin(user.userId, user.failedLoginAttempts ?? 0);
       throw new UnauthorizedException({ code: 'INVALID_CREDENTIALS', message: 'Invalid email or password' });
     }
 
     if (user.status === UserStatus.SUSPENDED) {
       throw new ForbiddenException({ code: 'ACCOUNT_SUSPENDED', message: 'Account has been suspended' });
+    }
+
+    if ((user.failedLoginAttempts ?? 0) > 0 || user.lockedUntil) {
+      await this.authRepository.updateUser(user.userId, { failedLoginAttempts: 0, lockedUntil: null } as any);
     }
 
     // Email verification requirement is temporarily disabled — see issue #20
@@ -296,6 +313,18 @@ export class AuthService {
   }
 
   // ─── Private helpers ────────────────────────────────────────────────────────
+
+  private static readonly MAX_FAILED_LOGIN_ATTEMPTS = 5;
+  private static readonly LOCKOUT_DURATION_MS = 15 * 60 * 1000;
+
+  private async registerFailedLogin(userId: string, currentAttempts: number): Promise<void> {
+    const attempts = currentAttempts + 1;
+    const update: Record<string, unknown> = { failedLoginAttempts: attempts };
+    if (attempts >= AuthService.MAX_FAILED_LOGIN_ATTEMPTS) {
+      update.lockedUntil = new Date(Date.now() + AuthService.LOCKOUT_DURATION_MS);
+    }
+    await this.authRepository.updateUser(userId, update as any);
+  }
 
   private async generateTokenPair(userId: string, email: string, role: string) {
     const accessToken = this.jwtService.sign({ sub: userId, email, role });

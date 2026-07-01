@@ -180,6 +180,72 @@ describe('AuthService', () => {
       expect(result.user.email).toBe('test@example.com');
       expect(mockRes.cookie).toHaveBeenCalledWith('refreshToken', expect.any(String), expect.any(Object));
     });
+
+    describe('account lockout', () => {
+      it('increments failedLoginAttempts on a wrong password', async () => {
+        repository.findUserByEmail.mockResolvedValue(makeUser({ failedLoginAttempts: 2 }));
+        bcryptCompare.mockResolvedValue(false);
+
+        await expect(service.login({ email: 'test@example.com', password: 'wrong' } as any, mockRes))
+          .rejects.toThrow(UnauthorizedException);
+
+        expect(repository.updateUser).toHaveBeenCalledWith('user-1', { failedLoginAttempts: 3 });
+      });
+
+      it('locks the account once failedLoginAttempts reaches the threshold', async () => {
+        repository.findUserByEmail.mockResolvedValue(makeUser({ failedLoginAttempts: 4 }));
+        bcryptCompare.mockResolvedValue(false);
+
+        await expect(service.login({ email: 'test@example.com', password: 'wrong' } as any, mockRes))
+          .rejects.toThrow(UnauthorizedException);
+
+        expect(repository.updateUser).toHaveBeenCalledWith('user-1', {
+          failedLoginAttempts: 5,
+          lockedUntil: expect.any(Date),
+        });
+      });
+
+      it('throws ForbiddenException with ACCOUNT_LOCKED when the account is currently locked', async () => {
+        repository.findUserByEmail.mockResolvedValue(
+          makeUser({ lockedUntil: new Date(Date.now() + 10 * 60 * 1000) }),
+        );
+        const callsBefore = bcryptCompare.mock.calls.length;
+
+        await expect(service.login({ email: 'test@example.com', password: 'pw' } as any, mockRes))
+          .rejects.toThrow(ForbiddenException);
+        // The lock check short-circuits before ever comparing the password
+        expect(bcryptCompare.mock.calls.length).toBe(callsBefore);
+      });
+
+      it('allows login again once the lockout has expired', async () => {
+        repository.findUserByEmail.mockResolvedValue(
+          makeUser({ lockedUntil: new Date(Date.now() - 1000), failedLoginAttempts: 5 }),
+        );
+
+        const result = await service.login({ email: 'test@example.com', password: 'pw' } as any, mockRes);
+
+        expect(result.accessToken).toBe('access-token');
+      });
+
+      it('resets failedLoginAttempts and lockedUntil on a successful login', async () => {
+        repository.findUserByEmail.mockResolvedValue(makeUser({ failedLoginAttempts: 3 }));
+
+        await service.login({ email: 'test@example.com', password: 'pw' } as any, mockRes);
+
+        expect(repository.updateUser).toHaveBeenCalledWith('user-1', {
+          failedLoginAttempts: 0,
+          lockedUntil: null,
+        });
+      });
+
+      it('does not call updateUser on success when there were no prior failed attempts', async () => {
+        repository.findUserByEmail.mockResolvedValue(makeUser({ failedLoginAttempts: 0 }));
+
+        await service.login({ email: 'test@example.com', password: 'pw' } as any, mockRes);
+
+        expect(repository.updateUser).not.toHaveBeenCalled();
+      });
+    });
   });
 
   // ─── refresh ─────────────────────────────────────────────────────────────────
