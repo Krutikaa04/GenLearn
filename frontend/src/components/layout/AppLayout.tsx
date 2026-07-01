@@ -3,7 +3,7 @@ import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, FileText, BookOpen, BrainCircuit,
   Layers, LogOut, GraduationCap, ChevronRight, BotMessageSquare,
-  CalendarDays, Menu, X,
+  CalendarDays, Menu, X, Shield,
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { useAuthStore } from '../../store/auth.store';
@@ -24,7 +24,7 @@ const aiNav = [
   { to: '/study-plan', icon: CalendarDays, label: 'Study Plan' },
 ];
 
-function SidebarContent({ dueCards, initials, user, onNavigate, handleLogout }: any) {
+function SidebarContent({ dueCards, initials, user, onNavigate, handleLogout, isAdmin }: any) {
   return (
     <>
       {/* Logo */}
@@ -109,6 +109,37 @@ function SidebarContent({ dueCards, initials, user, onNavigate, handleLogout }: 
             )}
           </NavLink>
         ))}
+
+        {isAdmin && (
+          <>
+            <p className="px-3 pt-4 pb-1.5 text-xs font-semibold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
+              Admin
+            </p>
+            <NavLink
+              to="/admin"
+              onClick={onNavigate}
+              className={({ isActive }) =>
+                `group flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 ${
+                  isActive ? 'shadow-sm' : 'hover:bg-[var(--danger-light)]'
+                }`
+              }
+              style={({ isActive }) => isActive
+                ? { background: 'rgba(239,68,68,0.1)', color: 'var(--danger)' }
+                : { color: 'var(--text-secondary)' }
+              }
+            >
+              {({ isActive }) => (
+                <>
+                  <div className="flex items-center gap-3">
+                    <Shield className="w-4 h-4 shrink-0" />
+                    Platform Admin
+                  </div>
+                  {isActive && <ChevronRight className="w-3.5 h-3.5 opacity-60" />}
+                </>
+              )}
+            </NavLink>
+          </>
+        )}
       </nav>
 
       {/* Footer */}
@@ -165,7 +196,8 @@ export function AppLayout() {
   };
 
   const initials = user ? `${user.firstName[0]}${user.lastName[0]}`.toUpperCase() : '?';
-  const sharedProps = { dueCards, initials, user, handleLogout, onNavigate: () => setMobileOpen(false) };
+  const isAdmin = user?.role === 'admin';
+  const sharedProps = { dueCards, initials, user, handleLogout, isAdmin, onNavigate: () => setMobileOpen(false) };
 
   return (
     <div className="flex min-h-screen" style={{ background: 'var(--bg)' }}>

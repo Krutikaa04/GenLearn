@@ -18,12 +18,20 @@ import { QuizzesPage } from './pages/quizzes/QuizzesPage';
 import { FlashcardsPage } from './pages/flashcards/FlashcardsPage';
 import { TutorPage } from './pages/tutor/TutorPage';
 import { StudyPlanPage } from './pages/studyplan/StudyPlanPage';
+import { AdminPage } from './pages/admin/AdminPage';
 
 const qc = new QueryClient({ defaultOptions: { queries: { retry: 1, staleTime: 30_000 } } });
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const token = useAuthStore((s) => s.accessToken);
   return token ? <>{children}</> : <Navigate to="/login" replace />;
+}
+
+function AdminRoute({ children }: { children: React.ReactNode }) {
+  const user = useAuthStore((s) => s.user);
+  if (!user) return <Navigate to="/login" replace />;
+  if (user.role !== 'admin') return <Navigate to="/dashboard" replace />;
+  return <>{children}</>;
 }
 
 function PublicRoute({ children }: { children: React.ReactNode }) {
@@ -52,6 +60,7 @@ export default function App() {
             <Route path="/tutor" element={<TutorPage />} />
             <Route path="/study-plan" element={<StudyPlanPage />} />
             <Route path="/profile" element={<ProfilePage />} />
+            <Route path="/admin" element={<AdminRoute><AdminPage /></AdminRoute>} />
           </Route>
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
