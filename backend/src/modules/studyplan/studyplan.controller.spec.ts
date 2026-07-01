@@ -9,7 +9,7 @@ const mockPlan = {
   studentId: 'student-1',
   goal: 'Learn React in 2 weeks',
   targetDate: '2026-07-14',
-  days: [
+  plan: [
     {
       day: 1,
       date: '2026-07-01',
@@ -86,8 +86,8 @@ describe('StudyPlanController', () => {
       service.generate.mockResolvedValue(mockPlan as any);
       const dto = { goal: 'Test', targetDate: '2026-07-10', topics: ['Test'], hoursPerDay: 1 };
       const result = await controller.generate(jwtPayload as any, dto as any);
-      expect(result.data.days).toHaveLength(2);
-      expect(result.data.days[0].tasks[0].type).toBe('lesson');
+      expect(result.data.plan).toHaveLength(2);
+      expect(result.data.plan[0].tasks[0].type).toBe('lesson');
     });
   });
 });
