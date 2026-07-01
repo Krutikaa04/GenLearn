@@ -52,9 +52,15 @@ function wrapper() {
   );
 }
 
+// Wraps a document array into the paginated response shape (data + meta) that
+// usePaginatedList expects from documentsApi.list.
+function page(items: any[]) {
+  return { data: { data: items, meta: { page: 1, pageSize: 20, total: items.length, totalPages: 1 } } };
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
-  (documentsApi.list as any).mockResolvedValue({ data: { data: [] } });
+  (documentsApi.list as any).mockResolvedValue(page([]));
 });
 
 describe('DocumentsPage', () => {
@@ -74,7 +80,7 @@ describe('DocumentsPage', () => {
   });
 
   it('renders document list with filename and status', async () => {
-    (documentsApi.list as any).mockResolvedValue({ data: { data: [mockReadyDoc] } });
+    (documentsApi.list as any).mockResolvedValue(page([mockReadyDoc]));
     render(<DocumentsPage />, { wrapper: wrapper() });
     expect(await screen.findByText('lecture-notes.pdf')).toBeInTheDocument();
     // 'ready' appears in both the status badge and the filter button
@@ -82,14 +88,14 @@ describe('DocumentsPage', () => {
   });
 
   it('shows processing spinner for processing documents', async () => {
-    (documentsApi.list as any).mockResolvedValue({ data: { data: [mockProcessingDoc] } });
+    (documentsApi.list as any).mockResolvedValue(page([mockProcessingDoc]));
     render(<DocumentsPage />, { wrapper: wrapper() });
     await screen.findByText('chapter2.docx');
     expect(document.querySelector('.animate-spin')).toBeInTheDocument();
   });
 
   it('shows search and filter controls when documents exist', async () => {
-    (documentsApi.list as any).mockResolvedValue({ data: { data: [mockReadyDoc] } });
+    (documentsApi.list as any).mockResolvedValue(page([mockReadyDoc]));
     render(<DocumentsPage />, { wrapper: wrapper() });
     await screen.findByText('lecture-notes.pdf');
     expect(screen.getByPlaceholderText('Search documents…')).toBeInTheDocument();
@@ -98,7 +104,7 @@ describe('DocumentsPage', () => {
 
   it('filters documents by search term', async () => {
     const doc2 = { ...mockReadyDoc, documentId: 'd2', originalFilename: 'textbook.pdf' };
-    (documentsApi.list as any).mockResolvedValue({ data: { data: [mockReadyDoc, doc2] } });
+    (documentsApi.list as any).mockResolvedValue(page([mockReadyDoc, doc2]));
     render(<DocumentsPage />, { wrapper: wrapper() });
     await screen.findByText('lecture-notes.pdf');
     await screen.findByText('textbook.pdf');
@@ -108,7 +114,7 @@ describe('DocumentsPage', () => {
   });
 
   it('shows no results message when search has no matches', async () => {
-    (documentsApi.list as any).mockResolvedValue({ data: { data: [mockReadyDoc] } });
+    (documentsApi.list as any).mockResolvedValue(page([mockReadyDoc]));
     render(<DocumentsPage />, { wrapper: wrapper() });
     await screen.findByText('lecture-notes.pdf');
     fireEvent.change(screen.getByPlaceholderText('Search documents…'), { target: { value: 'zzznomatch' } });
@@ -116,13 +122,13 @@ describe('DocumentsPage', () => {
   });
 
   it('shows file size in KB', async () => {
-    (documentsApi.list as any).mockResolvedValue({ data: { data: [mockReadyDoc] } });
+    (documentsApi.list as any).mockResolvedValue(page([mockReadyDoc]));
     render(<DocumentsPage />, { wrapper: wrapper() });
     expect(await screen.findByText(/200 KB/)).toBeInTheDocument();
   });
 
   it('opens ask modal when MessageSquare button is clicked', async () => {
-    (documentsApi.list as any).mockResolvedValue({ data: { data: [mockReadyDoc] } });
+    (documentsApi.list as any).mockResolvedValue(page([mockReadyDoc]));
     render(<DocumentsPage />, { wrapper: wrapper() });
     await screen.findByText('lecture-notes.pdf');
     const askBtn = document.querySelector('button[title="Ask a question"]') as HTMLButtonElement;
@@ -132,7 +138,7 @@ describe('DocumentsPage', () => {
   });
 
   it('closes ask modal on X button', async () => {
-    (documentsApi.list as any).mockResolvedValue({ data: { data: [mockReadyDoc] } });
+    (documentsApi.list as any).mockResolvedValue(page([mockReadyDoc]));
     render(<DocumentsPage />, { wrapper: wrapper() });
     await screen.findByText('lecture-notes.pdf');
     fireEvent.click(document.querySelector('button[title="Ask a question"]') as HTMLButtonElement);
@@ -147,7 +153,7 @@ describe('DocumentsPage', () => {
   });
 
   it('closes ask modal on Escape key', async () => {
-    (documentsApi.list as any).mockResolvedValue({ data: { data: [mockReadyDoc] } });
+    (documentsApi.list as any).mockResolvedValue(page([mockReadyDoc]));
     render(<DocumentsPage />, { wrapper: wrapper() });
     await screen.findByText('lecture-notes.pdf');
     fireEvent.click(document.querySelector('button[title="Ask a question"]') as HTMLButtonElement);
@@ -159,7 +165,7 @@ describe('DocumentsPage', () => {
   });
 
   it('confirms before closing on backdrop click when a question is typed', async () => {
-    (documentsApi.list as any).mockResolvedValue({ data: { data: [mockReadyDoc] } });
+    (documentsApi.list as any).mockResolvedValue(page([mockReadyDoc]));
     vi.spyOn(window, 'confirm').mockReturnValue(false);
     render(<DocumentsPage />, { wrapper: wrapper() });
     await screen.findByText('lecture-notes.pdf');
@@ -173,7 +179,7 @@ describe('DocumentsPage', () => {
   });
 
   it('closes on backdrop click without confirm when no question is typed', async () => {
-    (documentsApi.list as any).mockResolvedValue({ data: { data: [mockReadyDoc] } });
+    (documentsApi.list as any).mockResolvedValue(page([mockReadyDoc]));
     render(<DocumentsPage />, { wrapper: wrapper() });
     await screen.findByText('lecture-notes.pdf');
     fireEvent.click(document.querySelector('button[title="Ask a question"]') as HTMLButtonElement);
@@ -186,7 +192,7 @@ describe('DocumentsPage', () => {
   });
 
   it('sends question in ask modal and shows answer', async () => {
-    (documentsApi.list as any).mockResolvedValue({ data: { data: [mockReadyDoc] } });
+    (documentsApi.list as any).mockResolvedValue(page([mockReadyDoc]));
     (documentsApi.ask as any).mockResolvedValue({ data: { data: { answer: 'Binary search runs in O(log n).' } } });
     render(<DocumentsPage />, { wrapper: wrapper() });
     await screen.findByText('lecture-notes.pdf');
@@ -204,7 +210,7 @@ describe('DocumentsPage', () => {
   });
 
   it('navigates to lessons page when lesson button is clicked', async () => {
-    (documentsApi.list as any).mockResolvedValue({ data: { data: [mockReadyDoc] } });
+    (documentsApi.list as any).mockResolvedValue(page([mockReadyDoc]));
     render(<DocumentsPage />, { wrapper: wrapper() });
     await screen.findByText('lecture-notes.pdf');
     const lessonBtn = document.querySelector('button[title="Generate lesson from this document"]') as HTMLButtonElement;
@@ -213,7 +219,7 @@ describe('DocumentsPage', () => {
   });
 
   it('deletes a document after confirm', async () => {
-    (documentsApi.list as any).mockResolvedValue({ data: { data: [mockReadyDoc] } });
+    (documentsApi.list as any).mockResolvedValue(page([mockReadyDoc]));
     (documentsApi.delete as any).mockResolvedValue({});
     vi.spyOn(window, 'confirm').mockReturnValue(true);
     render(<DocumentsPage />, { wrapper: wrapper() });
@@ -239,6 +245,47 @@ describe('DocumentsPage', () => {
     });
     await waitFor(() => {
       expect(toast.success).toHaveBeenCalledWith('Uploaded — processing started');
+    });
+  });
+
+  describe('pagination', () => {
+    it('does not show Load more when all documents are already loaded', async () => {
+      (documentsApi.list as any).mockResolvedValue(page([mockReadyDoc]));
+      render(<DocumentsPage />, { wrapper: wrapper() });
+      await screen.findByText('lecture-notes.pdf');
+      expect(screen.queryByRole('button', { name: /Load more/ })).not.toBeInTheDocument();
+    });
+
+    it('shows Load more with a count when more documents exist on the server', async () => {
+      (documentsApi.list as any).mockResolvedValue({
+        data: { data: [mockReadyDoc], meta: { page: 1, pageSize: 20, total: 5, totalPages: 1 } },
+      });
+      render(<DocumentsPage />, { wrapper: wrapper() });
+      await screen.findByText('lecture-notes.pdf');
+      expect(await screen.findByRole('button', { name: 'Load more (1 of 5)' })).toBeInTheDocument();
+    });
+
+    it('fetches the next page with incremented page number when Load more is clicked', async () => {
+      const doc2 = { ...mockReadyDoc, documentId: 'd2', originalFilename: 'second.pdf' };
+      (documentsApi.list as any)
+        .mockResolvedValueOnce({ data: { data: [mockReadyDoc], meta: { page: 1, pageSize: 1, total: 2, totalPages: 2 } } })
+        .mockResolvedValueOnce({ data: { data: [doc2], meta: { page: 2, pageSize: 1, total: 2, totalPages: 2 } } });
+      render(<DocumentsPage />, { wrapper: wrapper() });
+      await screen.findByText('lecture-notes.pdf');
+      const loadMoreBtn = await screen.findByRole('button', { name: /Load more/ });
+      fireEvent.click(loadMoreBtn);
+      expect(await screen.findByText('second.pdf')).toBeInTheDocument();
+      expect(documentsApi.list).toHaveBeenLastCalledWith(2, 20);
+    });
+
+    it('hides Load more while actively searching', async () => {
+      (documentsApi.list as any).mockResolvedValue({
+        data: { data: [mockReadyDoc], meta: { page: 1, pageSize: 20, total: 5, totalPages: 1 } },
+      });
+      render(<DocumentsPage />, { wrapper: wrapper() });
+      await screen.findByRole('button', { name: /Load more/ });
+      fireEvent.change(screen.getByPlaceholderText('Search documents…'), { target: { value: 'lecture' } });
+      expect(screen.queryByRole('button', { name: /Load more/ })).not.toBeInTheDocument();
     });
   });
 });

@@ -99,9 +99,15 @@ function wrapper(initialPath = '/quizzes') {
   );
 }
 
+// Wraps a quiz array into the paginated response shape (data + meta) that
+// usePaginatedList expects from quizzesApi.list.
+function page(items: any[]) {
+  return { data: { data: items, meta: { page: 1, pageSize: 20, total: items.length, totalPages: 1 } } };
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
-  (quizzesApi.list as any).mockResolvedValue({ data: { data: [] } });
+  (quizzesApi.list as any).mockResolvedValue(page([]));
   (documentsApi.list as any).mockResolvedValue({ data: { data: [] } });
   (analyticsApi.getWeakTopics as any).mockResolvedValue({ data: { data: [] } });
 });
@@ -118,20 +124,20 @@ describe('QuizzesPage — list view', () => {
   });
 
   it('renders quiz list with title and difficulty badge', async () => {
-    (quizzesApi.list as any).mockResolvedValue({ data: { data: [mockReadyQuiz] } });
+    (quizzesApi.list as any).mockResolvedValue(page([mockReadyQuiz]));
     render(<QuizzesPage />, { wrapper: wrapper() });
     expect(await screen.findByText('Binary Trees Quiz')).toBeInTheDocument();
     expect(screen.getByText('intermediate')).toBeInTheDocument();
   });
 
   it('shows "Take Quiz" button for ready normal quizzes', async () => {
-    (quizzesApi.list as any).mockResolvedValue({ data: { data: [mockReadyQuiz] } });
+    (quizzesApi.list as any).mockResolvedValue(page([mockReadyQuiz]));
     render(<QuizzesPage />, { wrapper: wrapper() });
     expect(await screen.findByRole('button', { name: 'Take Quiz' })).toBeInTheDocument();
   });
 
   it('shows Challenge button with Zap icon for challenge quizzes', async () => {
-    (quizzesApi.list as any).mockResolvedValue({ data: { data: [mockChallenge] } });
+    (quizzesApi.list as any).mockResolvedValue(page([mockChallenge]));
     render(<QuizzesPage />, { wrapper: wrapper() });
     expect(await screen.findByText('Algorithm Challenge')).toBeInTheDocument();
     expect(screen.getByText('20min limit')).toBeInTheDocument();
@@ -139,26 +145,26 @@ describe('QuizzesPage — list view', () => {
   });
 
   it('shows Results button for submitted quizzes', async () => {
-    (quizzesApi.list as any).mockResolvedValue({ data: { data: [mockSubmittedQuiz] } });
+    (quizzesApi.list as any).mockResolvedValue(page([mockSubmittedQuiz]));
     render(<QuizzesPage />, { wrapper: wrapper() });
     expect(await screen.findByRole('button', { name: /Results/ })).toBeInTheDocument();
   });
 
   it('shows score percentage for submitted quizzes', async () => {
-    (quizzesApi.list as any).mockResolvedValue({ data: { data: [mockSubmittedQuiz] } });
+    (quizzesApi.list as any).mockResolvedValue(page([mockSubmittedQuiz]));
     render(<QuizzesPage />, { wrapper: wrapper() });
     expect(await screen.findByText('80%')).toBeInTheDocument();
   });
 
   it('shows generating spinner for quizzes being generated', async () => {
-    (quizzesApi.list as any).mockResolvedValue({ data: { data: [mockGeneratingQuiz] } });
+    (quizzesApi.list as any).mockResolvedValue(page([mockGeneratingQuiz]));
     render(<QuizzesPage />, { wrapper: wrapper() });
     await screen.findByText('Graphs');
     expect(document.querySelector('.animate-spin')).toBeInTheDocument();
   });
 
   it('deletes a quiz after confirm', async () => {
-    (quizzesApi.list as any).mockResolvedValue({ data: { data: [mockReadyQuiz] } });
+    (quizzesApi.list as any).mockResolvedValue(page([mockReadyQuiz]));
     (quizzesApi.delete as any).mockResolvedValue({});
     vi.spyOn(window, 'confirm').mockReturnValue(true);
     render(<QuizzesPage />, { wrapper: wrapper() });
@@ -285,7 +291,7 @@ describe('QuizzesPage — Generate modal', () => {
 
 describe('QuizzesPage — QuizTaker', () => {
   it('opens quiz taker modal when Take Quiz is clicked', async () => {
-    (quizzesApi.list as any).mockResolvedValue({ data: { data: [mockReadyQuiz] } });
+    (quizzesApi.list as any).mockResolvedValue(page([mockReadyQuiz]));
     (quizzesApi.getById as any).mockResolvedValue({ data: { data: mockQuizWithQuestions } });
     render(<QuizzesPage />, { wrapper: wrapper() });
     await screen.findByRole('button', { name: 'Take Quiz' });
@@ -294,7 +300,7 @@ describe('QuizzesPage — QuizTaker', () => {
   });
 
   it('shows question with answer options', async () => {
-    (quizzesApi.list as any).mockResolvedValue({ data: { data: [mockReadyQuiz] } });
+    (quizzesApi.list as any).mockResolvedValue(page([mockReadyQuiz]));
     (quizzesApi.getById as any).mockResolvedValue({ data: { data: mockQuizWithQuestions } });
     render(<QuizzesPage />, { wrapper: wrapper() });
     await screen.findByRole('button', { name: 'Take Quiz' });
@@ -305,7 +311,7 @@ describe('QuizzesPage — QuizTaker', () => {
   });
 
   it('selects an answer and advances to next question', async () => {
-    (quizzesApi.list as any).mockResolvedValue({ data: { data: [mockReadyQuiz] } });
+    (quizzesApi.list as any).mockResolvedValue(page([mockReadyQuiz]));
     (quizzesApi.getById as any).mockResolvedValue({ data: { data: mockQuizWithQuestions } });
     render(<QuizzesPage />, { wrapper: wrapper() });
     await screen.findByRole('button', { name: 'Take Quiz' });
@@ -319,7 +325,7 @@ describe('QuizzesPage — QuizTaker', () => {
   });
 
   it('submits quiz and shows score', async () => {
-    (quizzesApi.list as any).mockResolvedValue({ data: { data: [mockReadyQuiz] } });
+    (quizzesApi.list as any).mockResolvedValue(page([mockReadyQuiz]));
     (quizzesApi.getById as any).mockResolvedValue({ data: { data: mockQuizWithQuestions } });
     (quizzesApi.submit as any).mockResolvedValue({
       data: { data: { score: 2, totalQuestions: 2, scorePercent: 100, answers: [] } },
@@ -343,7 +349,7 @@ describe('QuizzesPage — QuizTaker', () => {
   });
 
   it('shows progress bar during quiz', async () => {
-    (quizzesApi.list as any).mockResolvedValue({ data: { data: [mockReadyQuiz] } });
+    (quizzesApi.list as any).mockResolvedValue(page([mockReadyQuiz]));
     (quizzesApi.getById as any).mockResolvedValue({ data: { data: mockQuizWithQuestions } });
     render(<QuizzesPage />, { wrapper: wrapper() });
     await screen.findByRole('button', { name: 'Take Quiz' });
@@ -353,7 +359,7 @@ describe('QuizzesPage — QuizTaker', () => {
   });
 
   it('shows 0/N answered text initially', async () => {
-    (quizzesApi.list as any).mockResolvedValue({ data: { data: [mockReadyQuiz] } });
+    (quizzesApi.list as any).mockResolvedValue(page([mockReadyQuiz]));
     (quizzesApi.getById as any).mockResolvedValue({ data: { data: mockQuizWithQuestions } });
     render(<QuizzesPage />, { wrapper: wrapper() });
     await screen.findByRole('button', { name: 'Take Quiz' });
@@ -365,7 +371,7 @@ describe('QuizzesPage — QuizTaker', () => {
 
 describe('QuizzesPage — ReviewModal', () => {
   it('opens results modal when Results button is clicked', async () => {
-    (quizzesApi.list as any).mockResolvedValue({ data: { data: [mockSubmittedQuiz] } });
+    (quizzesApi.list as any).mockResolvedValue(page([mockSubmittedQuiz]));
     (quizzesApi.reviewQuiz as any).mockResolvedValue({
       data: {
         data: {
@@ -388,7 +394,7 @@ describe('QuizzesPage — ReviewModal', () => {
   });
 
   it('shows answer correctness in results modal', async () => {
-    (quizzesApi.list as any).mockResolvedValue({ data: { data: [mockSubmittedQuiz] } });
+    (quizzesApi.list as any).mockResolvedValue(page([mockSubmittedQuiz]));
     (quizzesApi.reviewQuiz as any).mockResolvedValue({
       data: {
         data: {
@@ -408,5 +414,34 @@ describe('QuizzesPage — ReviewModal', () => {
     await screen.findByText('Quiz Results');
     expect(await screen.findByText('What is a stack?')).toBeInTheDocument();
     expect(screen.getByText('Queue is FIFO.')).toBeInTheDocument();
+  });
+});
+
+describe('QuizzesPage — pagination', () => {
+  it('does not show Load more when all quizzes are already loaded', async () => {
+    (quizzesApi.list as any).mockResolvedValue(page([mockReadyQuiz]));
+    render(<QuizzesPage />, { wrapper: wrapper() });
+    await screen.findByText('Binary Trees Quiz');
+    expect(screen.queryByRole('button', { name: /Load more/ })).not.toBeInTheDocument();
+  });
+
+  it('shows Load more with a count when more quizzes exist on the server', async () => {
+    (quizzesApi.list as any).mockResolvedValue({
+      data: { data: [mockReadyQuiz], meta: { page: 1, pageSize: 20, total: 4, totalPages: 1 } },
+    });
+    render(<QuizzesPage />, { wrapper: wrapper() });
+    await screen.findByText('Binary Trees Quiz');
+    expect(await screen.findByRole('button', { name: 'Load more (1 of 4)' })).toBeInTheDocument();
+  });
+
+  it('fetches the next page when Load more is clicked', async () => {
+    (quizzesApi.list as any)
+      .mockResolvedValueOnce({ data: { data: [mockReadyQuiz], meta: { page: 1, pageSize: 1, total: 2, totalPages: 2 } } })
+      .mockResolvedValueOnce({ data: { data: [mockSubmittedQuiz], meta: { page: 2, pageSize: 1, total: 2, totalPages: 2 } } });
+    render(<QuizzesPage />, { wrapper: wrapper() });
+    await screen.findByText('Binary Trees Quiz');
+    fireEvent.click(await screen.findByRole('button', { name: /Load more/ }));
+    expect(await screen.findByText('Sorting Quiz')).toBeInTheDocument();
+    expect(quizzesApi.list).toHaveBeenLastCalledWith(2, 20);
   });
 });

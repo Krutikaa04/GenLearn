@@ -102,6 +102,39 @@ describe('TutorPage — setup screen', () => {
     render(<TutorPage />, { wrapper: wrapper() });
     expect(await screen.findByRole('button', { name: /History/ })).toBeInTheDocument();
   });
+
+  describe('conversation history pagination', () => {
+    it('does not show Load more when all conversations are already loaded', async () => {
+      (conversationApi.list as any).mockResolvedValue({
+        data: { data: { items: [{ conversationId: 'c1', topic: 'Recursion', updatedAt: '2026-01-01' }], total: 1 } },
+      });
+      render(<TutorPage />, { wrapper: wrapper() });
+      fireEvent.click(await screen.findByRole('button', { name: /History/ }));
+      await screen.findByText('Recursion');
+      expect(screen.queryByRole('button', { name: /Load more/ })).not.toBeInTheDocument();
+    });
+
+    it('shows Load more with a count when more conversations exist on the server', async () => {
+      (conversationApi.list as any).mockResolvedValue({
+        data: { data: { items: [{ conversationId: 'c1', topic: 'Recursion', updatedAt: '2026-01-01' }], total: 3 } },
+      });
+      render(<TutorPage />, { wrapper: wrapper() });
+      fireEvent.click(await screen.findByRole('button', { name: /History/ }));
+      expect(await screen.findByRole('button', { name: 'Load more (1 of 3)' })).toBeInTheDocument();
+    });
+
+    it('fetches the next page when Load more is clicked', async () => {
+      (conversationApi.list as any)
+        .mockResolvedValueOnce({ data: { data: { items: [{ conversationId: 'c1', topic: 'Recursion', updatedAt: '2026-01-01' }], total: 2 } } })
+        .mockResolvedValueOnce({ data: { data: { items: [{ conversationId: 'c2', topic: 'Graphs', updatedAt: '2026-01-02' }], total: 2 } } });
+      render(<TutorPage />, { wrapper: wrapper() });
+      fireEvent.click(await screen.findByRole('button', { name: /History/ }));
+      await screen.findByText('Recursion');
+      fireEvent.click(await screen.findByRole('button', { name: /Load more/ }));
+      expect(await screen.findByText('Graphs')).toBeInTheDocument();
+      expect(conversationApi.list).toHaveBeenLastCalledWith(2, 20);
+    });
+  });
 });
 
 describe('TutorPage — chat view', () => {

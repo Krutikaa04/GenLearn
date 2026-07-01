@@ -11,6 +11,7 @@ import { Badge } from '../../components/ui/Badge';
 import { Input } from '../../components/ui/Input';
 import { MarkdownContent } from '../../components/ui/MarkdownContent';
 import { useModalA11y } from '../../components/ui/useModalA11y';
+import { usePaginatedList } from '../../hooks/usePaginatedList';
 
 const statusColor: Record<string, any> = { pending: 'gray', generating: 'yellow', ready: 'green', failed: 'red' };
 
@@ -196,11 +197,16 @@ export function LessonsPage() {
   const [showModal, setShowModal] = useState(!!(defaultTopic || defaultDocId));
   const [openId, setOpenId] = useState<string | null>(null);
 
-  const { data: lessons = [], isLoading } = useQuery({
-    queryKey: ['lessons'],
-    queryFn: () => lessonsApi.list().then((r) => r.data.data),
-    refetchInterval: (q) => q.state.data?.some((l: any) => l.status === 'generating' || l.status === 'pending') ? 3000 : false,
-  });
+  const {
+    items: lessons, total: lessonsTotal, isLoading, hasNextPage, isFetchingNextPage, fetchNextPage,
+  } = usePaginatedList(
+    ['lessons'],
+    (page, pageSize) => lessonsApi.list(page, pageSize).then((r) => ({ items: r.data.data, total: r.data.meta.total })),
+    {
+      pageSize: 20,
+      refetchInterval: (items) => items.some((l: any) => l.status === 'generating' || l.status === 'pending') ? 3000 : false,
+    },
+  );
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => lessonsApi.delete(id),
@@ -287,6 +293,14 @@ export function LessonsPage() {
               )}
             </Card>
           ))}
+        </div>
+      )}
+
+      {hasNextPage && (
+        <div className="flex justify-center pt-2">
+          <Button variant="outline" size="sm" onClick={() => fetchNextPage()} loading={isFetchingNextPage}>
+            Load more ({lessons.length} of {lessonsTotal})
+          </Button>
         </div>
       )}
 
