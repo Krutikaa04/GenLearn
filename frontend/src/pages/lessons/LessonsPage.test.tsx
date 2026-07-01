@@ -55,9 +55,15 @@ function wrapper(initialPath = '/lessons') {
   );
 }
 
+// Wraps a lesson array into the paginated response shape (data + meta) that
+// usePaginatedList expects from lessonsApi.list.
+function page(items: any[]) {
+  return { data: { data: items, meta: { page: 1, pageSize: 20, total: items.length, totalPages: 1 } } };
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
-  (lessonsApi.list as any).mockResolvedValue({ data: { data: [] } });
+  (lessonsApi.list as any).mockResolvedValue(page([]));
   (documentsApi.list as any).mockResolvedValue({ data: { data: [] } });
 });
 
@@ -77,30 +83,30 @@ describe('LessonsPage', () => {
     (lessonsApi.list as any).mockImplementation(() => new Promise((res) => { resolve = res; }));
     render(<LessonsPage />, { wrapper: wrapper() });
     expect(document.querySelector('.animate-spin')).toBeInTheDocument();
-    resolve({ data: { data: [] } });
+    resolve(page([]));
   });
 
   it('renders lesson list with topics', async () => {
-    (lessonsApi.list as any).mockResolvedValue({ data: { data: [mockReadyLesson, mockGeneratingLesson] } });
+    (lessonsApi.list as any).mockResolvedValue(page([mockReadyLesson, mockGeneratingLesson]));
     render(<LessonsPage />, { wrapper: wrapper() });
     expect(await screen.findByText('Introduction to Binary Trees')).toBeInTheDocument();
     expect(screen.getByText('Dynamic Programming')).toBeInTheDocument();
   });
 
   it('renders difficulty badges', async () => {
-    (lessonsApi.list as any).mockResolvedValue({ data: { data: [mockReadyLesson] } });
+    (lessonsApi.list as any).mockResolvedValue(page([mockReadyLesson]));
     render(<LessonsPage />, { wrapper: wrapper() });
     expect(await screen.findByText('intermediate')).toBeInTheDocument();
   });
 
   it('renders read time when available', async () => {
-    (lessonsApi.list as any).mockResolvedValue({ data: { data: [mockReadyLesson] } });
+    (lessonsApi.list as any).mockResolvedValue(page([mockReadyLesson]));
     render(<LessonsPage />, { wrapper: wrapper() });
     expect(await screen.findByText('8 min')).toBeInTheDocument();
   });
 
   it('shows loading spinner on generating lessons', async () => {
-    (lessonsApi.list as any).mockResolvedValue({ data: { data: [mockGeneratingLesson] } });
+    (lessonsApi.list as any).mockResolvedValue(page([mockGeneratingLesson]));
     render(<LessonsPage />, { wrapper: wrapper() });
     await screen.findByText('Dynamic Programming');
     const spinners = document.querySelectorAll('.animate-spin');
@@ -177,7 +183,7 @@ describe('LessonsPage', () => {
   });
 
   it('shows toast error when clicking a non-ready lesson', async () => {
-    (lessonsApi.list as any).mockResolvedValue({ data: { data: [mockGeneratingLesson] } });
+    (lessonsApi.list as any).mockResolvedValue(page([mockGeneratingLesson]));
     render(<LessonsPage />, { wrapper: wrapper() });
     await screen.findByText('Dynamic Programming');
     // Click on the lesson card row
@@ -197,7 +203,7 @@ describe('LessonsPage', () => {
   });
 
   it('deletes a lesson and calls the delete API', async () => {
-    (lessonsApi.list as any).mockResolvedValue({ data: { data: [mockReadyLesson] } });
+    (lessonsApi.list as any).mockResolvedValue(page([mockReadyLesson]));
     (lessonsApi.delete as any).mockResolvedValue({});
     vi.spyOn(window, 'confirm').mockReturnValue(true);
     render(<LessonsPage />, { wrapper: wrapper() });
@@ -210,5 +216,35 @@ describe('LessonsPage', () => {
         expect(lessonsApi.delete).toHaveBeenCalledWith('l1');
       });
     }
+  });
+
+  describe('pagination', () => {
+    it('does not show Load more when all lessons are already loaded', async () => {
+      (lessonsApi.list as any).mockResolvedValue(page([mockReadyLesson]));
+      render(<LessonsPage />, { wrapper: wrapper() });
+      await screen.findByText('Introduction to Binary Trees');
+      expect(screen.queryByRole('button', { name: /Load more/ })).not.toBeInTheDocument();
+    });
+
+    it('shows Load more with a count when more lessons exist on the server', async () => {
+      (lessonsApi.list as any).mockResolvedValue({
+        data: { data: [mockReadyLesson], meta: { page: 1, pageSize: 20, total: 3, totalPages: 1 } },
+      });
+      render(<LessonsPage />, { wrapper: wrapper() });
+      await screen.findByText('Introduction to Binary Trees');
+      expect(await screen.findByRole('button', { name: 'Load more (1 of 3)' })).toBeInTheDocument();
+    });
+
+    it('fetches the next page when Load more is clicked', async () => {
+      const lesson2 = { ...mockReadyLesson, lessonId: 'l3', title: 'Second Lesson' };
+      (lessonsApi.list as any)
+        .mockResolvedValueOnce({ data: { data: [mockReadyLesson], meta: { page: 1, pageSize: 1, total: 2, totalPages: 2 } } })
+        .mockResolvedValueOnce({ data: { data: [lesson2], meta: { page: 2, pageSize: 1, total: 2, totalPages: 2 } } });
+      render(<LessonsPage />, { wrapper: wrapper() });
+      await screen.findByText('Introduction to Binary Trees');
+      fireEvent.click(await screen.findByRole('button', { name: /Load more/ }));
+      expect(await screen.findByText('Second Lesson')).toBeInTheDocument();
+      expect(lessonsApi.list).toHaveBeenLastCalledWith(2, 20);
+    });
   });
 });

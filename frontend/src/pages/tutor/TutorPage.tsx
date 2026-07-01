@@ -8,6 +8,7 @@ import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { MarkdownContent } from '../../components/ui/MarkdownContent';
 import { useModalA11y } from '../../components/ui/useModalA11y';
+import { usePaginatedList } from '../../hooks/usePaginatedList';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -33,11 +34,11 @@ export function TutorPage() {
     queryFn: () => documentsApi.list().then((r) => r.data.data.filter((d: any) => d.status === 'ready')),
   });
 
-  const { data: history = [] } = useQuery({
-    queryKey: ['conversations'],
-    queryFn: () => conversationApi.list().then((r) => r.data.data.items),
-    enabled: historyOpen,
-  });
+  const { items: history, total: historyTotal, hasNextPage: historyHasNextPage, isFetchingNextPage: historyFetchingNextPage, fetchNextPage: historyFetchNextPage } = usePaginatedList(
+    ['conversations'],
+    (page, pageSize) => conversationApi.list(page, pageSize).then((r) => ({ items: r.data.data.items, total: r.data.data.total })),
+    { pageSize: 20, enabled: historyOpen },
+  );
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -170,6 +171,16 @@ export function TutorPage() {
               </button>
             ))}
           </div>
+        )}
+        {historyHasNextPage && (
+          <button
+            onClick={() => historyFetchNextPage()}
+            disabled={historyFetchingNextPage}
+            className="w-full text-center text-xs py-2.5 mt-1 rounded-xl hover:bg-[var(--bg-subtle)] disabled:opacity-60"
+            style={{ color: 'var(--text-muted)' }}
+          >
+            {historyFetchingNextPage ? 'Loading…' : `Load more (${history.length} of ${historyTotal})`}
+          </button>
         )}
       </div>
     </div>

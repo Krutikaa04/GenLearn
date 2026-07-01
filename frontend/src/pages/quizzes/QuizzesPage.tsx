@@ -11,6 +11,7 @@ import { Card } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
 import { Input } from '../../components/ui/Input';
 import { useModalA11y } from '../../components/ui/useModalA11y';
+import { usePaginatedList } from '../../hooks/usePaginatedList';
 
 const statusColor: Record<string, any> = { pending: 'gray', generating: 'yellow', ready: 'green', failed: 'red' };
 
@@ -554,11 +555,16 @@ export function QuizzesPage() {
   const [takingId, setTakingId] = useState<string | null>(null);
   const [reviewId, setReviewId] = useState<string | null>(null);
 
-  const { data: quizzes = [], isLoading } = useQuery({
-    queryKey: ['quizzes'],
-    queryFn: () => quizzesApi.list().then((r) => r.data.data),
-    refetchInterval: (q) => q.state.data?.some((q: any) => q.status === 'generating' || q.status === 'pending') ? 3000 : false,
-  });
+  const {
+    items: quizzes, total: quizzesTotal, isLoading, hasNextPage, isFetchingNextPage, fetchNextPage,
+  } = usePaginatedList(
+    ['quizzes'],
+    (page, pageSize) => quizzesApi.list(page, pageSize).then((r) => ({ items: r.data.data, total: r.data.meta.total })),
+    {
+      pageSize: 20,
+      refetchInterval: (items) => items.some((q: any) => q.status === 'generating' || q.status === 'pending') ? 3000 : false,
+    },
+  );
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => quizzesApi.delete(id),
@@ -634,6 +640,14 @@ export function QuizzesPage() {
               ><Trash2 className="w-4 h-4" /></button>
             </Card>
           ))}
+        </div>
+      )}
+
+      {hasNextPage && (
+        <div className="flex justify-center pt-2">
+          <Button variant="outline" size="sm" onClick={() => fetchNextPage()} loading={isFetchingNextPage}>
+            Load more ({quizzes.length} of {quizzesTotal})
+          </Button>
         </div>
       )}
 

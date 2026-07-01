@@ -10,7 +10,7 @@ export const quizzesApi = {
     challengeTopics?: string[];
     timeLimitMinutes?: number;
   }) => api.post('/quizzes/generate', dto),
-  list: () => api.get('/quizzes'),
+  list: (page = 1, pageSize = 20) => api.get('/quizzes', { params: { page, pageSize } }),
   getById: (id: string) => api.get(`/quizzes/${id}`),
   getStatus: (id: string) => api.get(`/quizzes/${id}/status`),
   submit: (id: string, answers: { questionId: string; selectedIndex: number }[]) =>

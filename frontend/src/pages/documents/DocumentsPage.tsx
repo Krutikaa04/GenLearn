@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { FileText, Upload, Trash2, MessageSquare, Loader2, CloudUpload, X, Send, BookOpen, BrainCircuit, Layers, Search } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
@@ -8,6 +8,7 @@ import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
 import { useModalA11y } from '../../components/ui/useModalA11y';
+import { usePaginatedList } from '../../hooks/usePaginatedList';
 
 const statusColor: Record<string, any> = {
   uploaded: 'blue', processing: 'yellow', embedding: 'yellow', ready: 'green', failed: 'red',
@@ -118,11 +119,16 @@ export function DocumentsPage() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
 
-  const { data: docs = [], isLoading } = useQuery({
-    queryKey: ['documents'],
-    queryFn: () => documentsApi.list().then((r) => r.data.data),
-    refetchInterval: (q) => q.state.data?.some((d: any) => d.status === 'processing' || d.status === 'embedding') ? 3000 : false,
-  });
+  const {
+    items: docs, total: docsTotal, isLoading, hasNextPage, isFetchingNextPage, fetchNextPage,
+  } = usePaginatedList(
+    ['documents'],
+    (page, pageSize) => documentsApi.list(page, pageSize).then((r) => ({ items: r.data.data, total: r.data.meta.total })),
+    {
+      pageSize: 20,
+      refetchInterval: (items) => items.some((d: any) => d.status === 'processing' || d.status === 'embedding') ? 3000 : false,
+    },
+  );
 
   const uploadMutation = useMutation({
     mutationFn: (file: File) => documentsApi.upload(file),
@@ -295,6 +301,14 @@ export function DocumentsPage() {
               </div>
             </Card>
           ))}
+        </div>
+      )}
+
+      {!search && statusFilter === 'all' && hasNextPage && (
+        <div className="flex justify-center pt-2">
+          <Button variant="outline" size="sm" onClick={() => fetchNextPage()} loading={isFetchingNextPage}>
+            Load more ({docs.length} of {docsTotal})
+          </Button>
         </div>
       )}
 
