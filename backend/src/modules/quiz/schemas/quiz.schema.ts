@@ -106,7 +106,6 @@ export class Quiz {
 export type QuizDocument = Quiz & Document;
 export const QuizSchema = SchemaFactory.createForClass(Quiz);
 
-QuizSchema.index({ quizId: 1 }, { unique: true });
 QuizSchema.index({ studentId: 1, createdAt: -1 });
 QuizSchema.index({ studentId: 1, status: 1 });
 QuizSchema.index({ deletedAt: 1 });

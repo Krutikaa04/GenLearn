@@ -53,4 +53,3 @@ export class StudentProgress {
 
 export type StudentProgressDocument = StudentProgress & Document;
 export const StudentProgressSchema = SchemaFactory.createForClass(StudentProgress);
-StudentProgressSchema.index({ studentId: 1 }, { unique: true });

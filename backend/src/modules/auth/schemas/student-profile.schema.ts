@@ -43,4 +43,3 @@ export class StudentProfile {
 export type StudentProfileDocument = StudentProfile & Document;
 export const StudentProfileSchema = SchemaFactory.createForClass(StudentProfile);
 
-StudentProfileSchema.index({ studentId: 1 }, { unique: true });

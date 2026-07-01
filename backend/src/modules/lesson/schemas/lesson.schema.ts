@@ -73,7 +73,6 @@ export class Lesson {
 export type LessonDocument = Lesson & Document;
 export const LessonSchema = SchemaFactory.createForClass(Lesson);
 
-LessonSchema.index({ lessonId: 1 }, { unique: true });
 LessonSchema.index({ studentId: 1, createdAt: -1 });
 LessonSchema.index({ studentId: 1, status: 1 });
 LessonSchema.index({ studentId: 1, topic: 1 });

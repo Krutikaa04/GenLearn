@@ -58,7 +58,6 @@ export class KnowledgeDocument {
 export type KnowledgeDocumentDocument = KnowledgeDocument & Document;
 export const KnowledgeDocumentSchema = SchemaFactory.createForClass(KnowledgeDocument);
 
-KnowledgeDocumentSchema.index({ documentId: 1 }, { unique: true });
 KnowledgeDocumentSchema.index({ studentId: 1, createdAt: -1 });
 KnowledgeDocumentSchema.index({ studentId: 1, status: 1 });
 KnowledgeDocumentSchema.index({ deletedAt: 1 });

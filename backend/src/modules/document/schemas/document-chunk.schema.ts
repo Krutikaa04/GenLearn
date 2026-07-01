@@ -35,6 +35,5 @@ export class DocumentChunk {
 export type DocumentChunkDocument = DocumentChunk & Document;
 export const DocumentChunkSchema = SchemaFactory.createForClass(DocumentChunk);
 
-DocumentChunkSchema.index({ chunkId: 1 }, { unique: true });
 DocumentChunkSchema.index({ documentId: 1, chunkIndex: 1 });
 DocumentChunkSchema.index({ studentId: 1 });

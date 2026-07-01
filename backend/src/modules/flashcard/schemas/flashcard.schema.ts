@@ -73,7 +73,6 @@ export class FlashcardSet {
 export type FlashcardSetDocument = FlashcardSet & Document;
 export const FlashcardSetSchema = SchemaFactory.createForClass(FlashcardSet);
 
-FlashcardSetSchema.index({ setId: 1 }, { unique: true });
 FlashcardSetSchema.index({ studentId: 1, createdAt: -1 });
 FlashcardSetSchema.index({ studentId: 1, sourceType: 1, sourceId: 1 });
 FlashcardSetSchema.index({ deletedAt: 1 });

@@ -7,6 +7,7 @@ import {
 import * as bcrypt from 'bcryptjs';
 import { AuthService } from './auth.service';
 import { UserStatus } from './schemas/user.schema';
+import { DifficultyLevel } from './schemas/student-profile.schema';
 
 jest.mock('bcryptjs');
 const bcryptHash = bcrypt.hash as jest.Mock;
@@ -313,7 +314,7 @@ describe('AuthService', () => {
         grade: '10',
         learningGoals: ['Pass exam'],
         interests: ['Math'],
-        preferredDifficulty: 'hard',
+        preferredDifficulty: DifficultyLevel.ADVANCED,
       });
 
       expect(repository.updateProfile).toHaveBeenCalledWith(
@@ -322,7 +323,7 @@ describe('AuthService', () => {
           grade: '10',
           learningGoals: ['Pass exam'],
           interests: ['Math'],
-          preferredDifficulty: 'hard',
+          preferredDifficulty: DifficultyLevel.ADVANCED,
         }),
       );
     });
