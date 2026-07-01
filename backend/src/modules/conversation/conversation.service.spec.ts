@@ -100,6 +100,32 @@ describe('ConversationService', () => {
     });
   });
 
+  describe('findAll', () => {
+    it('returns a paginated list of conversations with meta', async () => {
+      repository.findByStudentId.mockResolvedValue({
+        items: [
+          { conversationId: 'conv-1', topic: 'Recursion', updatedAt: new Date(), createdAt: new Date() },
+        ],
+        total: 1,
+      });
+
+      const result = await service.findAll('student-1', 1, 20);
+
+      expect(result.items).toHaveLength(1);
+      expect(result.items[0].conversationId).toBe('conv-1');
+      expect(result).toMatchObject({ total: 1, page: 1, pageSize: 20 });
+    });
+
+    it('returns an empty list when the student has no conversations', async () => {
+      repository.findByStudentId.mockResolvedValue({ items: [], total: 0 });
+
+      const result = await service.findAll('student-1', 1, 20);
+
+      expect(result.items).toEqual([]);
+      expect(result.total).toBe(0);
+    });
+  });
+
   describe('delete', () => {
     it('soft-deletes only after verifying ownership', async () => {
       repository.findById.mockResolvedValue({ conversationId: 'conv-1', studentId: 'student-1' });

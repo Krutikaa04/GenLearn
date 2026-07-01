@@ -89,6 +89,16 @@ describe('AnalyticsService', () => {
     });
   });
 
+  describe('recordQuizResult', () => {
+    it('delegates to analyticsRepository.updateAfterQuiz with the correct arguments', async () => {
+      repository.updateAfterQuiz.mockResolvedValue(undefined);
+
+      await service.recordQuizResult('student-1', 'Recursion', 75);
+
+      expect(repository.updateAfterQuiz).toHaveBeenCalledWith('student-1', 'Recursion', 75);
+    });
+  });
+
   describe('recordActivity', () => {
     it('maps activity types to the correct analytics counter field', async () => {
       await service.recordActivity('student-1', 'document');
