@@ -17,6 +17,7 @@ function GenerateModal({ onClose, initialDocId = '' }: { onClose: () => void; in
   const [sourceType, setSourceType] = useState<'document' | 'lesson'>(initialDocId ? 'document' : 'document');
   const [sourceId, setSourceId] = useState(initialDocId);
   const [count, setCount] = useState(15);
+  const [title, setTitle] = useState('');
 
   const { data: docs = [] } = useQuery({
     queryKey: ['documents'],
@@ -29,7 +30,7 @@ function GenerateModal({ onClose, initialDocId = '' }: { onClose: () => void; in
   });
 
   const mutation = useMutation({
-    mutationFn: () => flashcardsApi.generate({ sourceType, sourceId, count }),
+    mutationFn: () => flashcardsApi.generate({ sourceType, sourceId, count, ...(title.trim() ? { title: title.trim() } : {}) }),
     onSuccess: () => { toast.success('Flashcard generation started'); qc.invalidateQueries({ queryKey: ['flashcards'] }); onClose(); },
     onError: (err: any) => toast.error(err.response?.data?.error?.message || 'Failed'),
   });
@@ -87,6 +88,17 @@ function GenerateModal({ onClose, initialDocId = '' }: { onClose: () => void; in
             )}
           </div>
         )}
+
+        <div className="flex flex-col gap-1.5">
+          <label className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Set title <span style={{ color: 'var(--text-muted)' }}>(optional)</span></label>
+          <input
+            className="w-full rounded-xl px-3 py-2.5 text-sm ring-1 focus:ring-2 focus:ring-[var(--brand)] focus:outline-none"
+            style={{ background: 'var(--bg-surface)', color: 'var(--text-primary)' }}
+            placeholder="e.g. DSA Interview Prep"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+          />
+        </div>
 
         <div className="flex flex-col gap-1.5">
           <label className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Card count</label>
