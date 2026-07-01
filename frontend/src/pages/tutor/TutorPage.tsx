@@ -8,6 +8,7 @@ import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { MarkdownContent } from '../../components/ui/MarkdownContent';
 import { useModalA11y } from '../../components/ui/useModalA11y';
+import { ErrorBoundary } from '../../components/ErrorBoundary';
 import { usePaginatedList } from '../../hooks/usePaginatedList';
 
 interface Message {
@@ -127,6 +128,7 @@ export function TutorPage() {
     const panelRef = useModalA11y(() => setHistoryOpen(false));
     return (
     <div className="fixed inset-0 z-50 flex justify-end" style={{ background: 'rgba(0,0,0,0.4)' }} onClick={() => setHistoryOpen(false)}>
+      <ErrorBoundary compact>
       <div
         ref={panelRef}
         className="w-80 h-full border-l p-4 overflow-y-auto"
@@ -183,6 +185,7 @@ export function TutorPage() {
           </button>
         )}
       </div>
+      </ErrorBoundary>
     </div>
     );
   };

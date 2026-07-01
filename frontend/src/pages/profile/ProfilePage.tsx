@@ -14,6 +14,7 @@ import { Input } from '../../components/ui/Input';
 import { Card } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
 import { useModalA11y } from '../../components/ui/useModalA11y';
+import { ErrorBoundary } from '../../components/ErrorBoundary';
 
 function DeleteAccountModal({ email, onClose, onConfirm, loading }: { email: string; onClose: () => void; onConfirm: () => void; loading: boolean }) {
   const [confirmText, setConfirmText] = useState('');
@@ -22,6 +23,7 @@ function DeleteAccountModal({ email, onClose, onConfirm, loading }: { email: str
 
   return (
     <div className="fixed inset-0 flex items-center justify-center p-4 z-50" style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }} onClick={onClose}>
+      <ErrorBoundary compact>
       <div ref={panelRef} onClick={(e) => e.stopPropagation()} className="w-full max-w-md rounded-2xl border p-6 space-y-4" style={{ background: 'var(--bg-surface)', borderColor: 'var(--border)' }}>
         <div className="flex items-center gap-2">
           <AlertTriangle className="w-5 h-5" style={{ color: 'var(--danger)' }} />
@@ -52,6 +54,7 @@ function DeleteAccountModal({ email, onClose, onConfirm, loading }: { email: str
           </Button>
         </div>
       </div>
+      </ErrorBoundary>
     </div>
   );
 }

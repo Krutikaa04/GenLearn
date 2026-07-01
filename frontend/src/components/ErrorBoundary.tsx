@@ -3,6 +3,13 @@ import type { ErrorInfo, ReactNode } from 'react';
 
 interface Props {
   children: ReactNode;
+  /**
+   * Renders a smaller, non-viewport-filling fallback for boundaries scoped to
+   * a single component (e.g. a modal) rather than the whole app — so a crash
+   * confined to that component doesn't visually read as the entire app going
+   * down behind it.
+   */
+  compact?: boolean;
 }
 
 interface State {
@@ -24,7 +31,7 @@ export class ErrorBoundary extends Component<Props, State> {
     if (this.state.error) {
       return (
         <div
-          className="flex flex-col items-center justify-center min-h-screen gap-4 p-8 text-center"
+          className={`flex flex-col items-center justify-center gap-4 p-8 text-center ${this.props.compact ? 'rounded-2xl' : 'min-h-screen'}`}
           style={{ background: 'var(--bg-subtle)' }}
         >
           <div
