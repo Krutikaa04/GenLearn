@@ -220,6 +220,34 @@ describe('AuthService', () => {
 
   // ─── forgotPassword ───────────────────────────────────────────────────────────
 
+  describe('resendVerification', () => {
+    it('returns silently when the email does not exist (no information leakage)', async () => {
+      repository.findUserByEmail.mockResolvedValue(null);
+
+      await expect(service.resendVerification('ghost@example.com')).resolves.toBeUndefined();
+      expect(emailService.sendVerificationEmail).not.toHaveBeenCalled();
+    });
+
+    it('returns silently when the account is already verified', async () => {
+      repository.findUserByEmail.mockResolvedValue(makeUser({ emailVerified: true }));
+
+      await expect(service.resendVerification('test@example.com')).resolves.toBeUndefined();
+      expect(emailService.sendVerificationEmail).not.toHaveBeenCalled();
+    });
+
+    it('generates a fresh token and resends for an unverified account', async () => {
+      repository.findUserByEmail.mockResolvedValue(makeUser({ emailVerified: false }));
+
+      await service.resendVerification('test@example.com');
+
+      expect(repository.updateUser).toHaveBeenCalledWith('user-1', expect.objectContaining({
+        emailVerificationToken: expect.any(String),
+      }));
+      await Promise.resolve();
+      expect(emailService.sendVerificationEmail).toHaveBeenCalledWith('test@example.com', 'Alice', expect.any(String));
+    });
+  });
+
   describe('forgotPassword', () => {
     it('returns silently when the email does not exist (no information leakage)', async () => {
       repository.findUserByEmail.mockResolvedValue(null);

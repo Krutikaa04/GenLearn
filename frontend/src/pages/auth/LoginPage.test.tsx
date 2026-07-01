@@ -11,7 +11,7 @@ vi.mock('react-router-dom', async (importOriginal) => {
 });
 
 vi.mock('../../api/auth.api', () => ({
-  authApi: { login: vi.fn() },
+  authApi: { login: vi.fn(), resendVerification: vi.fn() },
 }));
 
 vi.mock('../../store/auth.store', () => ({
@@ -112,6 +112,66 @@ describe('LoginPage', () => {
     fireEvent.submit(screen.getByRole('button', { name: 'Sign in' }));
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith('Login failed');
+    });
+  });
+
+  describe('unverified email', () => {
+    it('shows a Resend verification email link when login fails with EMAIL_NOT_VERIFIED', async () => {
+      (authApi.login as any).mockRejectedValue({
+        response: { data: { error: { code: 'EMAIL_NOT_VERIFIED', message: 'Please verify your email before logging in' } } },
+      });
+      render(<LoginPage />, { wrapper });
+      fireEvent.input(screen.getByLabelText('Email address'), { target: { value: 'unverified@test.com' } });
+      fireEvent.input(screen.getByLabelText('Password'), { target: { value: 'password123' } });
+      fireEvent.submit(screen.getByRole('button', { name: 'Sign in' }));
+      expect(await screen.findByRole('button', { name: 'Resend verification email' })).toBeInTheDocument();
+    });
+
+    it('does not show the resend affordance for other login errors', async () => {
+      (authApi.login as any).mockRejectedValue({
+        response: { data: { error: { code: 'INVALID_CREDENTIALS', message: 'Invalid email or password' } } },
+      });
+      render(<LoginPage />, { wrapper });
+      fireEvent.input(screen.getByLabelText('Email address'), { target: { value: 'x@test.com' } });
+      fireEvent.input(screen.getByLabelText('Password'), { target: { value: 'wrongpass' } });
+      fireEvent.submit(screen.getByRole('button', { name: 'Sign in' }));
+      await waitFor(() => {
+        expect(toast.error).toHaveBeenCalled();
+      });
+      expect(screen.queryByRole('button', { name: 'Resend verification email' })).not.toBeInTheDocument();
+    });
+
+    it('calls authApi.resendVerification with the submitted email and shows a confirmation', async () => {
+      (authApi.login as any).mockRejectedValue({
+        response: { data: { error: { code: 'EMAIL_NOT_VERIFIED', message: 'Please verify your email before logging in' } } },
+      });
+      (authApi.resendVerification as any).mockResolvedValue({});
+      render(<LoginPage />, { wrapper });
+      fireEvent.input(screen.getByLabelText('Email address'), { target: { value: 'unverified@test.com' } });
+      fireEvent.input(screen.getByLabelText('Password'), { target: { value: 'password123' } });
+      fireEvent.submit(screen.getByRole('button', { name: 'Sign in' }));
+      const resendBtn = await screen.findByRole('button', { name: 'Resend verification email' });
+      fireEvent.click(resendBtn);
+      await waitFor(() => {
+        expect(authApi.resendVerification).toHaveBeenCalledWith('unverified@test.com');
+      });
+      expect(await screen.findByText(/Verification email sent to unverified@test.com/)).toBeInTheDocument();
+    });
+
+    it('shows an error toast when resend fails', async () => {
+      (authApi.login as any).mockRejectedValue({
+        response: { data: { error: { code: 'EMAIL_NOT_VERIFIED', message: 'Please verify your email before logging in' } } },
+      });
+      (authApi.resendVerification as any).mockRejectedValue(new Error('Network'));
+      render(<LoginPage />, { wrapper });
+      fireEvent.input(screen.getByLabelText('Email address'), { target: { value: 'unverified@test.com' } });
+      fireEvent.input(screen.getByLabelText('Password'), { target: { value: 'password123' } });
+      fireEvent.submit(screen.getByRole('button', { name: 'Sign in' }));
+      const resendBtn = await screen.findByRole('button', { name: 'Resend verification email' });
+      fireEvent.click(resendBtn);
+      await waitFor(() => {
+        expect(toast.error).toHaveBeenCalledWith('Could not resend verification email');
+      });
     });
   });
 });

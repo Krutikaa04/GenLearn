@@ -137,6 +137,24 @@ export class AuthService {
     } as any);
   }
 
+  async resendVerification(email: string) {
+    const user = await this.authRepository.findUserByEmail(email);
+
+    // Always return silently — don't reveal if the email exists or is already verified
+    if (!user || user.emailVerified) return;
+
+    const rawVerificationToken = crypto.randomBytes(32).toString('hex');
+    const verificationTokenHash = this.hash(rawVerificationToken);
+
+    await this.authRepository.updateUser(user.userId, {
+      emailVerificationToken: verificationTokenHash,
+    } as any);
+
+    this.emailService
+      .sendVerificationEmail(user.email, user.firstName, rawVerificationToken)
+      .catch((err) => this.logger.error('Resend verification email failed', err));
+  }
+
   async forgotPassword(email: string) {
     const user = await this.authRepository.findUserByEmail(email);
 

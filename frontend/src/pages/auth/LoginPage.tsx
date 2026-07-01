@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod/v4';
@@ -19,19 +20,41 @@ type Form = z.infer<typeof schema>;
 export function LoginPage() {
   const navigate = useNavigate();
   const setAuth = useAuthStore((s) => s.setAuth);
+  const [unverifiedEmail, setUnverifiedEmail] = useState<string | null>(null);
+  const [resending, setResending] = useState(false);
+  const [resent, setResent] = useState(false);
 
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<Form>({
     resolver: zodResolver(schema),
   });
 
   const onSubmit = async (data: Form) => {
+    setUnverifiedEmail(null);
+    setResent(false);
     try {
       const res = await authApi.login(data);
       const { user, accessToken } = res.data.data;
       setAuth(user, accessToken);
       navigate('/dashboard');
     } catch (err: any) {
+      if (err.response?.data?.error?.code === 'EMAIL_NOT_VERIFIED') {
+        setUnverifiedEmail(data.email);
+      }
       toast.error(err.response?.data?.error?.message || 'Login failed');
+    }
+  };
+
+  const handleResendVerification = async () => {
+    if (!unverifiedEmail) return;
+    setResending(true);
+    try {
+      await authApi.resendVerification(unverifiedEmail);
+      setResent(true);
+      toast.success('Verification email sent — check your inbox');
+    } catch {
+      toast.error('Could not resend verification email');
+    } finally {
+      setResending(false);
     }
   };
 
@@ -121,6 +144,23 @@ export function LoginPage() {
               Sign in
             </Button>
           </form>
+
+          {unverifiedEmail && (
+            <div className="rounded-xl p-3 text-sm text-center" style={{ background: 'var(--warning-light)', color: 'var(--warning)' }}>
+              {resent ? (
+                <p>Verification email sent to {unverifiedEmail} — check your inbox.</p>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleResendVerification}
+                  disabled={resending}
+                  className="font-semibold hover:underline disabled:opacity-60"
+                >
+                  {resending ? 'Sending…' : 'Resend verification email'}
+                </button>
+              )}
+            </div>
+          )}
 
           <p className="text-center text-sm" style={{ color: 'var(--text-muted)' }}>
             Don't have an account?{' '}
