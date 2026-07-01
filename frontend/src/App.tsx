@@ -10,6 +10,7 @@ import { ForgotPasswordPage } from './pages/auth/ForgotPasswordPage';
 import { ResetPasswordPage } from './pages/auth/ResetPasswordPage';
 import { VerifyEmailPage } from './pages/auth/VerifyEmailPage';
 import { ProfilePage } from './pages/profile/ProfilePage';
+import { NotFoundPage } from './pages/NotFoundPage';
 import { DashboardPage } from './pages/dashboard/DashboardPage';
 import { DocumentsPage } from './pages/documents/DocumentsPage';
 import { LessonsPage } from './pages/lessons/LessonsPage';
@@ -52,7 +53,7 @@ export default function App() {
             <Route path="/study-plan" element={<StudyPlanPage />} />
             <Route path="/profile" element={<ProfilePage />} />
           </Route>
-          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+          <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </BrowserRouter>
       <Toaster position="top-right" />
