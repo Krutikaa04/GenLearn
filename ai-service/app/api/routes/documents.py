@@ -1,3 +1,4 @@
+import base64
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from uuid import uuid4
@@ -13,7 +14,9 @@ router = APIRouter(dependencies=[Depends(verify_internal_key)])
 class ProcessDocumentRequest(BaseModel):
     documentId: str
     studentId: str
-    storagePath: str
+    fileContent: str  # base64-encoded file bytes — backend and ai-service run as
+    # separate Railway services with no shared filesystem, so the file can't be
+    # read by local path; it's sent over the wire instead.
     fileType: str
 
 
@@ -25,7 +28,8 @@ class ProcessDocumentResponse(BaseModel):
 @router.post("/process", response_model=ProcessDocumentResponse)
 async def process_document(request: ProcessDocumentRequest):
     try:
-        text = extract_text(request.storagePath)
+        content = base64.b64decode(request.fileContent)
+        text = extract_text(content, request.fileType)
     except Exception as e:
         raise HTTPException(status_code=422, detail=f"Text extraction failed: {e}")
 

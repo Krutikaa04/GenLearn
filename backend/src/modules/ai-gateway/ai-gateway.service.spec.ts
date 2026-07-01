@@ -25,7 +25,7 @@ describe('AiGatewayService', () => {
       const result = { chunkCount: 5, pageCount: 3 };
       httpPost.mockReturnValue(of({ data: result }));
 
-      const payload = { documentId: 'd1', studentId: 's1', storagePath: '/path', fileType: 'pdf' };
+      const payload = { documentId: 'd1', studentId: 's1', fileContent: 'YmFzZTY0', fileType: 'pdf' };
       const out = await service.processDocument(payload);
 
       expect(httpPost).toHaveBeenCalledWith(
@@ -138,7 +138,7 @@ describe('AiGatewayService', () => {
       httpPost.mockReturnValue(throwError(() => networkErr));
 
       await expect(service.processDocument({
-        documentId: 'd1', studentId: 's1', storagePath: '/path', fileType: 'pdf',
+        documentId: 'd1', studentId: 's1', fileContent: 'YmFzZTY0', fileType: 'pdf',
       })).rejects.toBeInstanceOf(ServiceUnavailableException);
     });
 
@@ -155,7 +155,7 @@ describe('AiGatewayService', () => {
 
     it('sends X-Internal-Key header on every request', async () => {
       httpPost.mockReturnValue(of({ data: { chunkCount: 1, pageCount: null } }));
-      await service.processDocument({ documentId: 'd1', studentId: 's1', storagePath: '/p', fileType: 'txt' });
+      await service.processDocument({ documentId: 'd1', studentId: 's1', fileContent: 'YmFzZTY0', fileType: 'txt' });
 
       const callArgs = httpPost.mock.calls[0];
       expect(callArgs[2].headers['X-Internal-Key']).toBe('test-internal-key');

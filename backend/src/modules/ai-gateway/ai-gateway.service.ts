@@ -7,7 +7,7 @@ import { AxiosError } from 'axios';
 export interface ProcessDocumentPayload {
   documentId: string;
   studentId: string;
-  storagePath: string;
+  fileContent: string;
   fileType: string;
 }
 
