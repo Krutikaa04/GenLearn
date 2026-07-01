@@ -22,7 +22,7 @@ export class AuthRepository {
   async findUserByEmail(email: string): Promise<UserDocument | null> {
     return this.userModel
       .findOne({ email: email.toLowerCase(), deletedAt: null })
-      .select('+passwordHash +refreshTokens +emailVerificationToken +passwordResetToken +passwordResetExpiry')
+      .select('+passwordHash +refreshTokens +emailVerificationToken +passwordResetToken +passwordResetExpiry +failedLoginAttempts +lockedUntil')
       .exec();
   }
 

@@ -74,6 +74,12 @@ export class User {
 
   @Prop({ type: Date, default: null })
   deletedAt: Date | null;
+
+  @Prop({ type: Number, default: 0, select: false })
+  failedLoginAttempts: number;
+
+  @Prop({ type: Date, default: null, select: false })
+  lockedUntil: Date | null;
 }
 
 export type UserDocument = User & Document;
