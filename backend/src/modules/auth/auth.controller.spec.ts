@@ -41,6 +41,7 @@ describe('AuthController', () => {
             resetPassword: jest.fn(),
             getMe: jest.fn(),
             updateProfile: jest.fn(),
+            deleteAccount: jest.fn(),
           },
         },
       ],
@@ -163,6 +164,21 @@ describe('AuthController', () => {
       const result = await controller.updateMe(jwtPayload as any, dto as any);
       expect(result).toEqual({ data: updated });
       expect(service.updateProfile).toHaveBeenCalledWith('user-1', dto);
+    });
+  });
+
+  describe('deleteMe', () => {
+    it('calls service.deleteAccount with the current user id and response object', async () => {
+      service.deleteAccount.mockResolvedValue(undefined as any);
+      await controller.deleteMe(jwtPayload as any, mockRes);
+      expect(service.deleteAccount).toHaveBeenCalledWith('user-1', mockRes);
+    });
+
+    it('isolates deletion to the JWT-derived userId', async () => {
+      service.deleteAccount.mockResolvedValue(undefined as any);
+      const otherUser = { userId: 'user-2', email: 'bob@test.com', role: 'student' };
+      await controller.deleteMe(otherUser as any, mockRes);
+      expect(service.deleteAccount).toHaveBeenCalledWith('user-2', mockRes);
     });
   });
 });

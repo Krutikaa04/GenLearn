@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
   HttpStatus,
@@ -120,5 +121,15 @@ export class AuthController {
   ) {
     const result = await this.authService.updateProfile(user.userId, dto);
     return { data: result };
+  }
+
+  @Delete('me')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Soft-delete the current user account' })
+  async deleteMe(
+    @CurrentUser() user: JwtPayload,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    await this.authService.deleteAccount(user.userId, res);
   }
 }
