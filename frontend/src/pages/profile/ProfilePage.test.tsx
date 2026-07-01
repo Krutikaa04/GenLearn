@@ -182,6 +182,26 @@ describe('ProfilePage', () => {
     });
   });
 
+  describe('accessibility — label associations', () => {
+    it('associates the Preferred difficulty label with its select via getByLabelText', async () => {
+      renderPage();
+      await waitFor(() => screen.getByDisplayValue('Alice'));
+      expect(screen.getByLabelText('Preferred difficulty')).toBeInTheDocument();
+    });
+
+    it('associates the Learning goals label with its input via getByLabelText', async () => {
+      renderPage();
+      await waitFor(() => screen.getByDisplayValue('Alice'));
+      expect(screen.getByLabelText('Learning goals')).toBeInTheDocument();
+    });
+
+    it('associates the Interests label with its input via getByLabelText', async () => {
+      renderPage();
+      await waitFor(() => screen.getByDisplayValue('Alice'));
+      expect(screen.getByLabelText('Interests')).toBeInTheDocument();
+    });
+  });
+
   describe('account deletion', () => {
     it('renders a Danger zone section with a Delete account button', async () => {
       renderPage();
