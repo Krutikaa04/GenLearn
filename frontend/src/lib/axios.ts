@@ -1,4 +1,5 @@
 import axios from 'axios';
+import toast from 'react-hot-toast';
 import { useAuthStore } from '../store/auth.store';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL
@@ -17,6 +18,17 @@ api.interceptors.response.use(
   (res) => res,
   async (err) => {
     const original = err.config;
+
+    if (err.response?.status === 429) {
+      const retryAfter = Number(err.response.headers?.['retry-after']);
+      const message = Number.isFinite(retryAfter) && retryAfter > 0
+        ? `Too many attempts — try again in ${retryAfter}s`
+        : 'Too many attempts — please wait a moment and try again';
+      // Fixed id dedupes repeated 429s (e.g. from a burst of parallel requests) into one toast
+      toast.error(message, { id: 'rate-limit-429' });
+      return Promise.reject(err);
+    }
+
     if (err.response?.status === 401 && !original._retry) {
       original._retry = true;
       try {
