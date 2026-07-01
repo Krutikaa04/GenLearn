@@ -1,16 +1,59 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod/v4';
 import toast from 'react-hot-toast';
-import { User, Plus, X } from 'lucide-react';
+import { User, Plus, X, AlertTriangle } from 'lucide-react';
 import api from '../../lib/axios';
+import { authApi } from '../../api/auth.api';
 import { useAuthStore } from '../../store/auth.store';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Card } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
+import { useModalA11y } from '../../components/ui/useModalA11y';
+
+function DeleteAccountModal({ email, onClose, onConfirm, loading }: { email: string; onClose: () => void; onConfirm: () => void; loading: boolean }) {
+  const [confirmText, setConfirmText] = useState('');
+  const panelRef = useModalA11y(onClose);
+  const canDelete = confirmText.trim().toLowerCase() === email.toLowerCase();
+
+  return (
+    <div className="fixed inset-0 flex items-center justify-center p-4 z-50" style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }} onClick={onClose}>
+      <div ref={panelRef} onClick={(e) => e.stopPropagation()} className="w-full max-w-md rounded-2xl border p-6 space-y-4" style={{ background: 'var(--bg-surface)', borderColor: 'var(--border)' }}>
+        <div className="flex items-center gap-2">
+          <AlertTriangle className="w-5 h-5" style={{ color: 'var(--danger)' }} />
+          <h3 className="font-semibold" style={{ color: 'var(--text-primary)' }}>Delete your account?</h3>
+        </div>
+        <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+          This cannot be undone. All your documents, lessons, quizzes, and flashcards will remain associated with your
+          account but you will lose access. Type <strong>{email}</strong> to confirm.
+        </p>
+        <input
+          value={confirmText}
+          onChange={(e) => setConfirmText(e.target.value)}
+          placeholder={email}
+          className="w-full rounded-xl px-3 py-2.5 text-sm ring-1 focus:ring-2 focus:ring-[var(--danger)] focus:outline-none"
+          style={{ background: 'var(--bg-subtle)', color: 'var(--text-primary)' }}
+        />
+        <div className="flex gap-2 pt-1">
+          <Button variant="outline" onClick={onClose} className="flex-1">Cancel</Button>
+          <Button
+            variant="danger"
+            onClick={onConfirm}
+            loading={loading}
+            disabled={!canDelete}
+            className="flex-1"
+          >
+            Delete account
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 const schema = z.object({
   firstName: z.string().min(2, 'At least 2 characters').max(50),
@@ -22,11 +65,23 @@ type Form = z.infer<typeof schema>;
 
 export function ProfilePage() {
   const qc = useQueryClient();
-  const { user, setAuth, accessToken } = useAuthStore();
+  const navigate = useNavigate();
+  const { user, setAuth, accessToken, logout } = useAuthStore();
   const [goalInput, setGoalInput] = useState('');
   const [interestInput, setInterestInput] = useState('');
   const [goals, setGoals] = useState<string[]>([]);
   const [interests, setInterests] = useState<string[]>([]);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+
+  const deleteMutation = useMutation({
+    mutationFn: () => authApi.deleteAccount(),
+    onSuccess: () => {
+      logout();
+      navigate('/login');
+      toast.success('Account deleted');
+    },
+    onError: (err: any) => toast.error(err.response?.data?.error?.message || 'Could not delete account'),
+  });
 
   const { data: profile, isLoading } = useQuery({
     queryKey: ['me'],
@@ -199,6 +254,27 @@ export function ProfilePage() {
           Save changes
         </Button>
       </form>
+
+      <Card padding="lg" className="space-y-3">
+        <h2 className="text-sm font-semibold flex items-center gap-1.5" style={{ color: 'var(--danger)' }}>
+          <AlertTriangle className="w-4 h-4" />Danger zone
+        </h2>
+        <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+          Deleting your account is permanent and cannot be undone.
+        </p>
+        <Button type="button" variant="danger" onClick={() => setShowDeleteModal(true)}>
+          Delete account
+        </Button>
+      </Card>
+
+      {showDeleteModal && user && (
+        <DeleteAccountModal
+          email={user.email}
+          onClose={() => setShowDeleteModal(false)}
+          onConfirm={() => deleteMutation.mutate()}
+          loading={deleteMutation.isPending}
+        />
+      )}
     </div>
   );
 }

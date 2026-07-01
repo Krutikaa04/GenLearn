@@ -5,6 +5,13 @@ import { MemoryRouter } from 'react-router-dom';
 import { ProfilePage } from './ProfilePage';
 import { useAuthStore } from '../../store/auth.store';
 
+const mockNavigate = vi.fn();
+
+vi.mock('react-router-dom', async (importOriginal) => {
+  const mod = await importOriginal<typeof import('react-router-dom')>();
+  return { ...mod, useNavigate: () => mockNavigate };
+});
+
 vi.mock('react-hot-toast', () => ({
   default: { success: vi.fn(), error: vi.fn() },
 }));
@@ -16,7 +23,12 @@ vi.mock('../../lib/axios', () => {
   return { default: api };
 });
 
+vi.mock('../../api/auth.api', () => ({
+  authApi: { deleteAccount: vi.fn() },
+}));
+
 import api from '../../lib/axios';
+import { authApi } from '../../api/auth.api';
 import toast from 'react-hot-toast';
 
 const mockUser = {
@@ -167,6 +179,94 @@ describe('ProfilePage', () => {
     await waitFor(() => {
       expect(screen.getByText('alice@example.com')).toBeInTheDocument();
       expect(screen.getByText('student')).toBeInTheDocument();
+    });
+  });
+
+  describe('account deletion', () => {
+    it('renders a Danger zone section with a Delete account button', async () => {
+      renderPage();
+      await waitFor(() => screen.getByDisplayValue('Alice'));
+      expect(screen.getByText('Danger zone')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Delete account' })).toBeInTheDocument();
+    });
+
+    it('opens the confirm modal when Delete account is clicked', async () => {
+      renderPage();
+      await waitFor(() => screen.getByDisplayValue('Alice'));
+      fireEvent.click(screen.getByRole('button', { name: 'Delete account' }));
+      expect(await screen.findByText('Delete your account?')).toBeInTheDocument();
+    });
+
+    it('disables the confirm button until the email is typed exactly', async () => {
+      renderPage();
+      await waitFor(() => screen.getByDisplayValue('Alice'));
+      fireEvent.click(screen.getByRole('button', { name: 'Delete account' }));
+      await screen.findByText('Delete your account?');
+      const confirmBtns = screen.getAllByRole('button', { name: 'Delete account' });
+      const modalConfirmBtn = confirmBtns[confirmBtns.length - 1];
+      expect(modalConfirmBtn).toBeDisabled();
+
+      fireEvent.change(screen.getByPlaceholderText('alice@example.com'), { target: { value: 'wrong@example.com' } });
+      expect(modalConfirmBtn).toBeDisabled();
+
+      fireEvent.change(screen.getByPlaceholderText('alice@example.com'), { target: { value: 'alice@example.com' } });
+      expect(modalConfirmBtn).not.toBeDisabled();
+    });
+
+    it('calls authApi.deleteAccount, logs out, and navigates to /login on confirm', async () => {
+      (authApi.deleteAccount as any).mockResolvedValue({});
+      renderPage();
+      await waitFor(() => screen.getByDisplayValue('Alice'));
+      fireEvent.click(screen.getByRole('button', { name: 'Delete account' }));
+      await screen.findByText('Delete your account?');
+      fireEvent.change(screen.getByPlaceholderText('alice@example.com'), { target: { value: 'alice@example.com' } });
+      const confirmBtns = screen.getAllByRole('button', { name: 'Delete account' });
+      fireEvent.click(confirmBtns[confirmBtns.length - 1]);
+      await waitFor(() => {
+        expect(authApi.deleteAccount).toHaveBeenCalled();
+        expect(mockNavigate).toHaveBeenCalledWith('/login');
+      });
+      expect(useAuthStore.getState().user).toBeNull();
+    });
+
+    it('shows an error toast when deletion fails', async () => {
+      (authApi.deleteAccount as any).mockRejectedValue({
+        response: { data: { error: { message: 'Server error' } } },
+      });
+      renderPage();
+      await waitFor(() => screen.getByDisplayValue('Alice'));
+      fireEvent.click(screen.getByRole('button', { name: 'Delete account' }));
+      await screen.findByText('Delete your account?');
+      fireEvent.change(screen.getByPlaceholderText('alice@example.com'), { target: { value: 'alice@example.com' } });
+      const confirmBtns = screen.getAllByRole('button', { name: 'Delete account' });
+      fireEvent.click(confirmBtns[confirmBtns.length - 1]);
+      await waitFor(() => {
+        expect(toast.error).toHaveBeenCalledWith('Server error');
+      });
+      expect(mockNavigate).not.toHaveBeenCalled();
+    });
+
+    it('closes the modal on Cancel without deleting', async () => {
+      renderPage();
+      await waitFor(() => screen.getByDisplayValue('Alice'));
+      fireEvent.click(screen.getByRole('button', { name: 'Delete account' }));
+      await screen.findByText('Delete your account?');
+      fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+      await waitFor(() => {
+        expect(screen.queryByText('Delete your account?')).not.toBeInTheDocument();
+      });
+      expect(authApi.deleteAccount).not.toHaveBeenCalled();
+    });
+
+    it('closes the modal on Escape key', async () => {
+      renderPage();
+      await waitFor(() => screen.getByDisplayValue('Alice'));
+      fireEvent.click(screen.getByRole('button', { name: 'Delete account' }));
+      await screen.findByText('Delete your account?');
+      fireEvent.keyDown(document, { key: 'Escape' });
+      await waitFor(() => {
+        expect(screen.queryByText('Delete your account?')).not.toBeInTheDocument();
+      });
     });
   });
 });

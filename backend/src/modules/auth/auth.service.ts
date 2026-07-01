@@ -219,6 +219,14 @@ export class AuthService {
     return this.getMe(userId);
   }
 
+  async deleteAccount(userId: string, res: { clearCookie: Function }) {
+    await this.authRepository.updateUser(userId, {
+      deletedAt: new Date(),
+      refreshTokens: [],
+    } as any);
+    res.clearCookie('refreshToken', { path: '/api/v1/auth' });
+  }
+
   // ─── Private helpers ────────────────────────────────────────────────────────
 
   private async generateTokenPair(userId: string, email: string, role: string) {

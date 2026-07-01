@@ -268,6 +268,27 @@ describe('AuthService', () => {
     });
   });
 
+  // ─── deleteAccount ──────────────────────────────────────────────────────────
+
+  describe('deleteAccount', () => {
+    it('soft-deletes the user by setting deletedAt and clearing refresh tokens', async () => {
+      const mockRes = { clearCookie: jest.fn() };
+      await service.deleteAccount('user-1', mockRes);
+
+      expect(repository.updateUser).toHaveBeenCalledWith('user-1', expect.objectContaining({
+        deletedAt: expect.any(Date),
+        refreshTokens: [],
+      }));
+    });
+
+    it('clears the refresh token cookie', async () => {
+      const mockRes = { clearCookie: jest.fn() };
+      await service.deleteAccount('user-1', mockRes);
+
+      expect(mockRes.clearCookie).toHaveBeenCalledWith('refreshToken', { path: '/api/v1/auth' });
+    });
+  });
+
   // ─── getMe ────────────────────────────────────────────────────────────────────
 
   describe('getMe', () => {
