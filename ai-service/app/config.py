@@ -1,7 +1,9 @@
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
+    model_config = SettingsConfigDict(env_file=".env")
+
     ENVIRONMENT: str = "development"
     PORT: int = 8000
 
@@ -21,9 +23,6 @@ class Settings(BaseSettings):
 
     # Redis
     REDIS_URL: str = "redis://redis:6379"
-
-    class Config:
-        env_file = ".env"
 
 
 settings = Settings()
