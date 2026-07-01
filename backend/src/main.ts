@@ -10,8 +10,30 @@ import { AllExceptionsFilter } from './common/filters/http-exception.filter';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
 
+async function createAppWithRetry(maxAttempts = 5, baseDelayMs = 2000) {
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      return await NestFactory.create(AppModule);
+    } catch (err) {
+      if (attempt === maxAttempts) throw err;
+      const delay = baseDelayMs * attempt;
+      console.error(
+        `Bootstrap attempt ${attempt}/${maxAttempts} failed (${(err as Error).message}) — retrying in ${delay}ms`,
+      );
+      await new Promise((resolve) => setTimeout(resolve, delay));
+    }
+  }
+  // Unreachable — the loop above always returns or throws
+  throw new Error('Bootstrap retry loop exited unexpectedly');
+}
+
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  // A transient MongoDB/Redis connection failure during startup (Railway cold
+  // start racing DNS/network availability, Atlas maintenance) would otherwise
+  // crash the process immediately, relying on the platform's restart policy
+  // (a full container restart) to recover. Retrying in-process first is faster
+  // and cheaper than a cold restart loop.
+  const app = await createAppWithRetry();
 
   app.setGlobalPrefix('api/v1');
   app.use(helmet());

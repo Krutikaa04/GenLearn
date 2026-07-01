@@ -24,6 +24,13 @@ import { HealthController } from './health/health.controller';
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => ({
         uri: configService.getOrThrow<string>('DATABASE_URL'),
+        // A transient blip (Railway cold start, Atlas maintenance) shouldn't need
+        // a full process restart to recover from — give the driver a real window
+        // to retry server selection before giving up, and retry writes/reads that
+        // land during a replica set election.
+        serverSelectionTimeoutMS: 10_000,
+        retryWrites: true,
+        retryReads: true,
       }),
       inject: [ConfigService],
     }),
@@ -36,6 +43,12 @@ import { HealthController } from './health/health.controller';
             host: url.hostname,
             port: parseInt(url.port || '6379', 10),
             password: url.password || undefined,
+            // BullMQ's recommendation: let ioredis queue commands indefinitely
+            // during a reconnect instead of failing them after a fixed retry
+            // count, and keep attempting to reconnect with capped backoff
+            // rather than giving up after ioredis's default retry limit.
+            maxRetriesPerRequest: null,
+            retryStrategy: (times: number) => Math.min(times * 200, 5000),
           },
         };
       },
