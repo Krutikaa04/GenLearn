@@ -285,4 +285,69 @@ describe('AuthService', () => {
       expect(result.email).toBe('test@example.com');
     });
   });
+
+  // ─── updateProfile ────────────────────────────────────────────────────────────
+
+  describe('updateProfile', () => {
+    beforeEach(() => {
+      repository.findUserById.mockResolvedValue(makeUser());
+    });
+
+    it('updates firstName and lastName via updateUser when provided', async () => {
+      await service.updateProfile('user-1', { firstName: 'Bob', lastName: 'Jones' });
+
+      expect(repository.updateUser).toHaveBeenCalledWith(
+        'user-1',
+        expect.objectContaining({ firstName: 'Bob', lastName: 'Jones' }),
+      );
+    });
+
+    it('does not call updateUser when no name fields are provided', async () => {
+      await service.updateProfile('user-1', { grade: '10' });
+
+      expect(repository.updateUser).not.toHaveBeenCalled();
+    });
+
+    it('updates profile fields via updateProfile when provided', async () => {
+      await service.updateProfile('user-1', {
+        grade: '10',
+        learningGoals: ['Pass exam'],
+        interests: ['Math'],
+        preferredDifficulty: 'hard',
+      });
+
+      expect(repository.updateProfile).toHaveBeenCalledWith(
+        'user-1',
+        expect.objectContaining({
+          grade: '10',
+          learningGoals: ['Pass exam'],
+          interests: ['Math'],
+          preferredDifficulty: 'hard',
+        }),
+      );
+    });
+
+    it('does not call updateProfile when no profile fields are provided', async () => {
+      await service.updateProfile('user-1', { firstName: 'Bob' });
+
+      expect(repository.updateProfile).not.toHaveBeenCalled();
+    });
+
+    it('returns the updated user via getMe after persisting changes', async () => {
+      const result = await service.updateProfile('user-1', { firstName: 'Bob' });
+
+      expect(result.email).toBe('test@example.com');
+      expect(result).not.toHaveProperty('passwordHash');
+    });
+
+    it('handles a partial update with only interests', async () => {
+      await service.updateProfile('user-1', { interests: ['Physics', 'Chemistry'] });
+
+      expect(repository.updateProfile).toHaveBeenCalledWith(
+        'user-1',
+        expect.objectContaining({ interests: ['Physics', 'Chemistry'] }),
+      );
+      expect(repository.updateUser).not.toHaveBeenCalled();
+    });
+  });
 });

@@ -1,13 +1,12 @@
 """Gemini client — single shared instance with retry logic."""
 import json
 import re
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 from app.config import settings
 
-genai.configure(api_key=settings.GEMINI_API_KEY)
-
-_model = genai.GenerativeModel(settings.MODEL_NAME)
+_client = genai.Client(api_key=settings.GEMINI_API_KEY)
 
 
 @retry(
@@ -17,9 +16,10 @@ _model = genai.GenerativeModel(settings.MODEL_NAME)
     reraise=True,
 )
 async def generate_text(prompt: str, temperature: float = 0.7) -> str:
-    response = await _model.generate_content_async(
-        prompt,
-        generation_config=genai.GenerationConfig(temperature=temperature),
+    response = await _client.aio.models.generate_content(
+        model=settings.MODEL_NAME,
+        contents=prompt,
+        config=types.GenerateContentConfig(temperature=temperature),
     )
     return response.text
 
@@ -39,18 +39,18 @@ async def generate_json(prompt: str, temperature: float = 0.3) -> dict:
 
 
 async def embed_text(text: str) -> list[float]:
-    result = await genai.embed_content_async(
+    result = await _client.aio.models.embed_content(
         model=settings.EMBEDDING_MODEL,
-        content=text,
-        task_type="retrieval_document",
+        contents=text,
+        config=types.EmbedContentConfig(task_type="RETRIEVAL_DOCUMENT"),
     )
-    return result["embedding"]
+    return result.embeddings[0].values
 
 
 async def embed_query(text: str) -> list[float]:
-    result = await genai.embed_content_async(
+    result = await _client.aio.models.embed_content(
         model=settings.EMBEDDING_MODEL,
-        content=text,
-        task_type="retrieval_query",
+        contents=text,
+        config=types.EmbedContentConfig(task_type="RETRIEVAL_QUERY"),
     )
-    return result["embedding"]
+    return result.embeddings[0].values

@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { FileText, Upload, Trash2, MessageSquare, Loader2, CloudUpload, X, Send, BookOpen, BrainCircuit, Layers } from 'lucide-react';
+import { FileText, Upload, Trash2, MessageSquare, Loader2, CloudUpload, X, Send, BookOpen, BrainCircuit, Layers, Search } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import { documentsApi } from '../../api/documents.api';
@@ -99,6 +99,8 @@ export function DocumentsPage() {
   const fileRef = useRef<HTMLInputElement>(null);
   const [askDoc, setAskDoc] = useState<{ id: string; name: string } | null>(null);
   const [dragging, setDragging] = useState(false);
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
 
   const { data: docs = [], isLoading } = useQuery({
     queryKey: ['documents'],
@@ -127,6 +129,12 @@ export function DocumentsPage() {
     setDragging(false);
     handleFiles(e.dataTransfer.files);
   }, []);
+
+  const filtered = docs.filter((d: any) => {
+    const matchesSearch = !search || d.originalFilename?.toLowerCase().includes(search.toLowerCase());
+    const matchesStatus = statusFilter === 'all' || d.status === statusFilter;
+    return matchesSearch && matchesStatus;
+  });
 
   return (
     <div className="space-y-6">
@@ -161,6 +169,37 @@ export function DocumentsPage() {
         <p className="text-xs" style={{ color: 'var(--text-muted)' }}>PDF · DOCX · TXT · MD · max 20 MB</p>
       </div>
 
+      {/* Search + Filter */}
+      {docs.length > 0 && (
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: 'var(--text-muted)' }} />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search documents…"
+              className="w-full pl-9 pr-4 py-2 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand)] ring-1"
+              style={{ background: 'var(--bg-surface)', color: 'var(--text-primary)', ringColor: 'var(--border)' }}
+            />
+          </div>
+          <div className="flex gap-1 flex-wrap">
+            {['all', 'ready', 'processing', 'failed'].map((s) => (
+              <button
+                key={s}
+                onClick={() => setStatusFilter(s)}
+                className="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors capitalize"
+                style={statusFilter === s
+                  ? { background: 'var(--brand)', color: '#fff' }
+                  : { background: 'var(--bg-subtle)', color: 'var(--text-muted)' }
+                }
+              >
+                {s === 'all' ? 'All' : s}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* List */}
       {isLoading ? (
         <div className="flex justify-center py-16"><Loader2 className="w-6 h-6 animate-spin" style={{ color: 'var(--text-muted)' }} /></div>
@@ -170,9 +209,15 @@ export function DocumentsPage() {
           <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>No documents yet</p>
           <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>Upload your first document to get started</p>
         </div>
+      ) : filtered.length === 0 ? (
+        <div className="text-center py-12">
+          <Search className="w-8 h-8 mx-auto mb-3" style={{ color: 'var(--border-strong)' }} />
+          <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>No documents match your search</p>
+          <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>Try a different name or status filter</p>
+        </div>
       ) : (
         <div className="space-y-2">
-          {docs.map((doc: any) => (
+          {filtered.map((doc: any) => (
             <Card key={doc.documentId} padding="md" className="flex items-center gap-4">
               <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={{ background: 'var(--bg-subtle)' }}>
                 <FileText className="w-4 h-4" style={{ color: 'var(--text-muted)' }} />

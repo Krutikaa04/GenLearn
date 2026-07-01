@@ -1,7 +1,7 @@
 """Extract plain text from PDF, DOCX, TXT, and MD files."""
 import io
 from pathlib import Path
-import PyPDF2
+from pypdf import PdfReader
 from docx import Document as DocxDocument
 
 
@@ -22,7 +22,7 @@ def extract_text(file_path: str) -> str:
 def _extract_pdf(file_path: str) -> str:
     text_parts = []
     with open(file_path, "rb") as f:
-        reader = PyPDF2.PdfReader(f)
+        reader = PdfReader(f)
         for page in reader.pages:
             text = page.extract_text()
             if text:
