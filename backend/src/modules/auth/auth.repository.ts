@@ -117,6 +117,13 @@ export class AuthRepository {
       .exec();
   }
 
+  async findUserByPendingEmailToken(tokenHash: string): Promise<UserDocument | null> {
+    return this.userModel
+      .findOne({ pendingEmailToken: tokenHash, deletedAt: null })
+      .select('+pendingEmailToken')
+      .exec();
+  }
+
   async emailExists(email: string): Promise<boolean> {
     const count = await this.userModel.countDocuments({
       email: email.toLowerCase(),

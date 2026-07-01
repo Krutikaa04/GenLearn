@@ -219,6 +219,53 @@ export class AuthService {
     return this.getMe(userId);
   }
 
+  async requestEmailChange(userId: string, newEmail: string) {
+    const user = await this.authRepository.findUserById(userId);
+    if (!user) throw new NotFoundException({ code: 'USER_NOT_FOUND', message: 'User not found' });
+
+    const normalizedEmail = newEmail.toLowerCase();
+    if (normalizedEmail === user.email) {
+      throw new ConflictException({ code: 'SAME_EMAIL', message: 'This is already your current email address' });
+    }
+
+    const exists = await this.authRepository.emailExists(normalizedEmail);
+    if (exists) {
+      throw new ConflictException({ code: 'EMAIL_ALREADY_EXISTS', message: 'Email address is already registered' });
+    }
+
+    const rawToken = crypto.randomBytes(32).toString('hex');
+    const tokenHash = this.hash(rawToken);
+
+    await this.authRepository.updateUser(userId, {
+      pendingEmail: normalizedEmail,
+      pendingEmailToken: tokenHash,
+    } as any);
+
+    this.emailService
+      .sendEmailChangeConfirmation(normalizedEmail, user.firstName, rawToken)
+      .catch((err) => this.logger.error('Email change confirmation email failed', err));
+  }
+
+  async confirmEmailChange(rawToken: string) {
+    const tokenHash = this.hash(rawToken);
+    const user = await this.authRepository.findUserByPendingEmailToken(tokenHash);
+
+    if (!user || !user.pendingEmail) {
+      throw new UnauthorizedException({ code: 'INVALID_TOKEN', message: 'Confirmation link is invalid or has already been used' });
+    }
+
+    const stillAvailable = !(await this.authRepository.emailExists(user.pendingEmail));
+    if (!stillAvailable) {
+      throw new ConflictException({ code: 'EMAIL_ALREADY_EXISTS', message: 'Email address is already registered' });
+    }
+
+    await this.authRepository.updateUser(user.userId, {
+      email: user.pendingEmail,
+      pendingEmail: null,
+      pendingEmailToken: null,
+    } as any);
+  }
+
   async deleteAccount(userId: string, res: { clearCookie: Function }) {
     await this.authRepository.updateUser(userId, {
       deletedAt: new Date(),

@@ -42,6 +42,8 @@ describe('AuthController', () => {
             getMe: jest.fn(),
             updateProfile: jest.fn(),
             deleteAccount: jest.fn(),
+            requestEmailChange: jest.fn(),
+            confirmEmailChange: jest.fn(),
           },
         },
       ],
@@ -179,6 +181,25 @@ describe('AuthController', () => {
       const otherUser = { userId: 'user-2', email: 'bob@test.com', role: 'student' };
       await controller.deleteMe(otherUser as any, mockRes);
       expect(service.deleteAccount).toHaveBeenCalledWith('user-2', mockRes);
+    });
+  });
+
+  describe('changeEmail', () => {
+    it('calls service.requestEmailChange with the current userId and new email, returns a message', async () => {
+      service.requestEmailChange.mockResolvedValue(undefined as any);
+      const dto = { newEmail: 'new@test.com' };
+      const result = await controller.changeEmail(jwtPayload as any, dto as any);
+      expect(service.requestEmailChange).toHaveBeenCalledWith('user-1', 'new@test.com');
+      expect(result).toEqual({ data: { message: expect.any(String) } });
+    });
+  });
+
+  describe('confirmEmailChange', () => {
+    it('calls service.confirmEmailChange with the token, returns a success message', async () => {
+      service.confirmEmailChange.mockResolvedValue(undefined as any);
+      const result = await controller.confirmEmailChange('raw-token');
+      expect(service.confirmEmailChange).toHaveBeenCalledWith('raw-token');
+      expect(result).toEqual({ data: { message: expect.any(String) } });
     });
   });
 });

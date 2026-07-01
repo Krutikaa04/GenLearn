@@ -72,6 +72,17 @@ export function ProfilePage() {
   const [goals, setGoals] = useState<string[]>([]);
   const [interests, setInterests] = useState<string[]>([]);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [emailInput, setEmailInput] = useState(() => user?.email ?? '');
+  const [emailChangeRequested, setEmailChangeRequested] = useState(false);
+
+  const emailChangeMutation = useMutation({
+    mutationFn: (newEmail: string) => authApi.changeEmail(newEmail),
+    onSuccess: () => {
+      setEmailChangeRequested(true);
+      toast.success('Check your new email address to confirm the change');
+    },
+    onError: (err: any) => toast.error(err.response?.data?.error?.message || 'Could not request email change'),
+  });
 
   const deleteMutation = useMutation({
     mutationFn: () => authApi.deleteAccount(),
@@ -159,6 +170,35 @@ export function ProfilePage() {
             {user?.role}
           </p>
         </div>
+      </Card>
+
+      <Card padding="lg" className="space-y-3">
+        <h2 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Email address</h2>
+        {emailChangeRequested ? (
+          <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+            Check <strong>{emailInput}</strong> for a confirmation link. Your email won't change until you click it.
+          </p>
+        ) : (
+          <div className="flex gap-2 items-end">
+            <div className="flex-1">
+              <Input
+                label="New email"
+                type="email"
+                value={emailInput}
+                onChange={(e) => setEmailInput(e.target.value)}
+              />
+            </div>
+            <Button
+              type="button"
+              variant="secondary"
+              loading={emailChangeMutation.isPending}
+              disabled={!emailInput.trim() || emailInput.trim().toLowerCase() === user?.email?.toLowerCase()}
+              onClick={() => emailChangeMutation.mutate(emailInput.trim())}
+            >
+              Change email
+            </Button>
+          </div>
+        )}
       </Card>
 
       <form onSubmit={handleSubmit((d) => mutation.mutate(d))} className="space-y-5">
