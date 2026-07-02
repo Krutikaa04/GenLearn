@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'react-hot-toast';
+import { MotionConfig } from 'framer-motion';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { useAuthStore } from './store/auth.store';
 import { AppLayout } from './components/layout/AppLayout';
@@ -17,6 +18,7 @@ import { DocumentsPage } from './pages/documents/DocumentsPage';
 import { LessonsPage } from './pages/lessons/LessonsPage';
 import { QuizzesPage } from './pages/quizzes/QuizzesPage';
 import { FlashcardsPage } from './pages/flashcards/FlashcardsPage';
+import { ProgressPage } from './pages/analytics/ProgressPage';
 import { TutorPage } from './pages/tutor/TutorPage';
 import { StudyPlanPage } from './pages/studyplan/StudyPlanPage';
 import { AdminPage } from './pages/admin/AdminPage';
@@ -43,6 +45,7 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
 export default function App() {
   return (
     <ErrorBoundary>
+    <MotionConfig reducedMotion="user">
     <QueryClientProvider client={qc}>
       <BrowserRouter>
         <Routes>
@@ -59,6 +62,7 @@ export default function App() {
             <Route path="/lessons" element={<LessonsPage />} />
             <Route path="/quizzes" element={<QuizzesPage />} />
             <Route path="/flashcards" element={<FlashcardsPage />} />
+            <Route path="/progress" element={<ProgressPage />} />
             <Route path="/tutor" element={<TutorPage />} />
             <Route path="/study-plan" element={<StudyPlanPage />} />
             <Route path="/profile" element={<ProfilePage />} />
@@ -69,6 +73,7 @@ export default function App() {
       </BrowserRouter>
       <Toaster position="top-right" />
     </QueryClientProvider>
+    </MotionConfig>
     </ErrorBoundary>
   );
 }

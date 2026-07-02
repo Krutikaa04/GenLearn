@@ -3,13 +3,15 @@ import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, FileText, BookOpen, BrainCircuit,
   Layers, LogOut, GraduationCap, ChevronRight, BotMessageSquare,
-  CalendarDays, Menu, Shield,
+  CalendarDays, Menu, Shield, TrendingUp,
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
+import { motion } from 'framer-motion';
 import { useAuthStore } from '../../store/auth.store';
 import { authApi } from '../../api/auth.api';
 import { flashcardsApi } from '../../api/flashcards.api';
 import { ThemeToggle } from '../ui/ThemeToggle';
+import { springSoft } from '../../lib/motion';
 
 const nav = [
   { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
@@ -17,12 +19,52 @@ const nav = [
   { to: '/lessons', icon: BookOpen, label: 'Lessons' },
   { to: '/quizzes', icon: BrainCircuit, label: 'Quizzes' },
   { to: '/flashcards', icon: Layers, label: 'Flashcards' },
+  { to: '/progress', icon: TrendingUp, label: 'Progress' },
 ];
 
 const aiNav = [
   { to: '/tutor', icon: BotMessageSquare, label: 'AI Tutor' },
   { to: '/study-plan', icon: CalendarDays, label: 'Study Plan' },
 ];
+
+/** Nav link with a shared sliding "active" background that animates between items via layoutId. */
+function NavItem({ to, icon: Icon, label, onNavigate, badge, danger }: any) {
+  return (
+    <NavLink
+      to={to}
+      onClick={onNavigate}
+      className={({ isActive }) =>
+        `group relative flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors duration-150 ${
+          isActive ? '' : 'hover:bg-[var(--bg-subtle)]'
+        }`
+      }
+    >
+      {({ isActive }) => (
+        <>
+          {isActive && (
+            <motion.span
+              layoutId="sidebar-active-bg"
+              className="absolute inset-0 rounded-xl shadow-sm"
+              style={{ background: danger ? 'rgba(239,68,68,0.1)' : 'var(--brand-light)' }}
+              transition={springSoft}
+            />
+          )}
+          <div
+            className="relative z-10 flex items-center gap-3 transition-colors duration-150"
+            style={{ color: isActive ? (danger ? 'var(--danger)' : 'var(--brand)') : 'var(--text-secondary)' }}
+          >
+            <Icon className="w-4 h-4 shrink-0" />
+            {label}
+          </div>
+          <div className="relative z-10 flex items-center gap-1">
+            {badge}
+            {isActive && <ChevronRight className="w-3.5 h-3.5 opacity-60" style={{ color: danger ? 'var(--danger)' : 'var(--brand)' }} />}
+          </div>
+        </>
+      )}
+    </NavLink>
+  );
+}
 
 function SidebarContent({ dueCards, initials, user, onNavigate, handleLogout, isAdmin }: any) {
   return (
@@ -31,7 +73,7 @@ function SidebarContent({ dueCards, initials, user, onNavigate, handleLogout, is
       <div className="px-5 py-5 border-b" style={{ borderColor: 'var(--border)' }}>
         <div className="flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-xl flex items-center justify-center"
-            style={{ background: 'var(--brand)', boxShadow: '0 2px 8px rgba(124,58,237,0.35)' }}>
+            style={{ background: 'var(--brand-gradient)', boxShadow: 'var(--shadow-glow)' }}>
             <GraduationCap className="w-4 h-4 text-white" />
           </div>
           <div>
@@ -46,68 +88,28 @@ function SidebarContent({ dueCards, initials, user, onNavigate, handleLogout, is
         <p className="px-3 pt-2 pb-1.5 text-xs font-semibold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
           Learn
         </p>
-        {nav.map(({ to, icon: Icon, label }) => (
-          <NavLink
+        {nav.map(({ to, icon, label }) => (
+          <NavItem
             key={to}
             to={to}
-            onClick={onNavigate}
-            className={({ isActive }) =>
-              `group flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 ${
-                isActive ? 'shadow-sm' : 'hover:bg-[var(--bg-subtle)]'
-              }`
+            icon={icon}
+            label={label}
+            onNavigate={onNavigate}
+            badge={
+              to === '/flashcards' && dueCards.length > 0 && (
+                <span className="text-xs font-bold px-1.5 py-0.5 rounded-full" style={{ background: 'var(--brand)', color: '#fff', fontSize: '10px' }}>
+                  {dueCards.length}
+                </span>
+              )
             }
-            style={({ isActive }) => isActive
-              ? { background: 'var(--brand-light)', color: 'var(--brand)' }
-              : { color: 'var(--text-secondary)' }
-            }
-          >
-            {({ isActive }) => (
-              <>
-                <div className="flex items-center gap-3">
-                  <Icon className="w-4 h-4 shrink-0" />
-                  {label}
-                </div>
-                <div className="flex items-center gap-1">
-                  {to === '/flashcards' && dueCards.length > 0 && (
-                    <span className="text-xs font-bold px-1.5 py-0.5 rounded-full" style={{ background: 'var(--brand)', color: '#fff', fontSize: '10px' }}>
-                      {dueCards.length}
-                    </span>
-                  )}
-                  {isActive && <ChevronRight className="w-3.5 h-3.5 opacity-60" />}
-                </div>
-              </>
-            )}
-          </NavLink>
+          />
         ))}
 
         <p className="px-3 pt-4 pb-1.5 text-xs font-semibold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
           AI Tools
         </p>
-        {aiNav.map(({ to, icon: Icon, label }) => (
-          <NavLink
-            key={to}
-            to={to}
-            onClick={onNavigate}
-            className={({ isActive }) =>
-              `group flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 ${
-                isActive ? 'shadow-sm' : 'hover:bg-[var(--bg-subtle)]'
-              }`
-            }
-            style={({ isActive }) => isActive
-              ? { background: 'var(--brand-light)', color: 'var(--brand)' }
-              : { color: 'var(--text-secondary)' }
-            }
-          >
-            {({ isActive }) => (
-              <>
-                <div className="flex items-center gap-3">
-                  <Icon className="w-4 h-4 shrink-0" />
-                  {label}
-                </div>
-                {isActive && <ChevronRight className="w-3.5 h-3.5 opacity-60" />}
-              </>
-            )}
-          </NavLink>
+        {aiNav.map(({ to, icon, label }) => (
+          <NavItem key={to} to={to} icon={icon} label={label} onNavigate={onNavigate} />
         ))}
 
         {isAdmin && (
@@ -115,29 +117,7 @@ function SidebarContent({ dueCards, initials, user, onNavigate, handleLogout, is
             <p className="px-3 pt-4 pb-1.5 text-xs font-semibold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
               Admin
             </p>
-            <NavLink
-              to="/admin"
-              onClick={onNavigate}
-              className={({ isActive }) =>
-                `group flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 ${
-                  isActive ? 'shadow-sm' : 'hover:bg-[var(--danger-light)]'
-                }`
-              }
-              style={({ isActive }) => isActive
-                ? { background: 'rgba(239,68,68,0.1)', color: 'var(--danger)' }
-                : { color: 'var(--text-secondary)' }
-              }
-            >
-              {({ isActive }) => (
-                <>
-                  <div className="flex items-center gap-3">
-                    <Shield className="w-4 h-4 shrink-0" />
-                    Platform Admin
-                  </div>
-                  {isActive && <ChevronRight className="w-3.5 h-3.5 opacity-60" />}
-                </>
-              )}
-            </NavLink>
+            <NavItem to="/admin" icon={Shield} label="Platform Admin" onNavigate={onNavigate} danger />
           </>
         )}
       </nav>
@@ -242,7 +222,7 @@ export function AppLayout() {
             <Menu className="w-5 h-5" />
           </button>
           <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-lg flex items-center justify-center" style={{ background: 'var(--brand)' }}>
+            <div className="w-6 h-6 rounded-lg flex items-center justify-center" style={{ background: 'var(--brand-gradient)' }}>
               <GraduationCap className="w-3.5 h-3.5 text-white" />
             </div>
             <span className="font-bold text-sm" style={{ color: 'var(--text-primary)' }}>GenLearn</span>

@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Layers, Plus, Trash2, Loader2, RotateCcw, ChevronLeft, ChevronRight, X, Brain } from 'lucide-react';
+import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { flashcardsApi } from '../../api/flashcards.api';
 import { documentsApi } from '../../api/documents.api';
@@ -11,6 +12,54 @@ import { Card } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
 import { useModalA11y } from '../../components/ui/useModalA11y';
 import { ErrorBoundary } from '../../components/ErrorBoundary';
+import { springSoft } from '../../lib/motion';
+
+/** SRS review card with a 3D flip between question (front) and answer (back). */
+function FlipCard({ flipped, onFlip, setLabel, front, back, hint }: {
+  flipped: boolean;
+  onFlip: () => void;
+  setLabel?: string;
+  front: string;
+  back: string;
+  hint?: string;
+}) {
+  return (
+    <div className="min-h-52" style={{ perspective: '1400px' }}>
+      <motion.div
+        className="relative w-full h-full min-h-52 cursor-pointer select-none"
+        style={{ transformStyle: 'preserve-3d' }}
+        animate={{ rotateY: flipped ? 180 : 0 }}
+        transition={springSoft}
+        onClick={onFlip}
+      >
+        {/* Front */}
+        <div
+          className="absolute inset-0 rounded-2xl border p-8 flex flex-col items-center justify-center text-center"
+          style={{ background: 'var(--bg-surface)', borderColor: 'var(--border)', boxShadow: 'var(--shadow-lg)', backfaceVisibility: 'hidden' }}
+        >
+          {setLabel && <p className="text-xs font-bold uppercase tracking-widest mb-1" style={{ color: 'var(--text-muted)' }}>{setLabel}</p>}
+          <p className="text-xs font-bold uppercase tracking-widest mb-4" style={{ color: 'var(--brand)' }}>Question</p>
+          <p className="text-lg font-semibold leading-snug" style={{ color: 'var(--text-primary)' }}>{front}</p>
+          {hint && (
+            <p className="text-xs mt-4 px-3 py-1.5 rounded-full" style={{ background: 'var(--brand-light)', color: 'var(--brand)' }}>
+              💡 {hint}
+            </p>
+          )}
+          <p className="text-xs mt-4" style={{ color: 'var(--text-muted)' }}>Tap to reveal answer</p>
+        </div>
+        {/* Back */}
+        <div
+          className="absolute inset-0 rounded-2xl border p-8 flex flex-col items-center justify-center text-center"
+          style={{ background: 'var(--bg-surface)', borderColor: 'var(--border)', boxShadow: 'var(--shadow-lg)', backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}
+        >
+          {setLabel && <p className="text-xs font-bold uppercase tracking-widest mb-1" style={{ color: 'var(--text-muted)' }}>{setLabel}</p>}
+          <p className="text-xs font-bold uppercase tracking-widest mb-4" style={{ color: 'var(--success)' }}>Answer</p>
+          <p className="text-lg font-semibold leading-snug" style={{ color: 'var(--text-primary)' }}>{back}</p>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
 
 const statusColor: Record<string, any> = { pending: 'gray', generating: 'yellow', ready: 'green', failed: 'red' };
 
@@ -206,24 +255,13 @@ function FlashcardReview({ setId, onClose }: { setId: string; onClose: () => voi
         </div>
 
         {/* Card */}
-        <div
-          className="rounded-2xl border p-8 min-h-52 flex flex-col items-center justify-center text-center cursor-pointer transition-all duration-200 hover:scale-[1.01] select-none"
-          style={{ background: 'var(--bg-surface)', borderColor: 'var(--border)', boxShadow: 'var(--shadow-lg)' }}
-          onClick={() => setFlipped(!flipped)}
-        >
-          <p className="text-xs font-bold uppercase tracking-widest mb-4" style={{ color: flipped ? 'var(--success)' : 'var(--brand)' }}>
-            {flipped ? 'Answer' : 'Question'}
-          </p>
-          <p className="text-lg font-semibold leading-snug" style={{ color: 'var(--text-primary)' }}>
-            {flipped ? card?.back : card?.front}
-          </p>
-          {!flipped && card?.hint && (
-            <p className="text-xs mt-4 px-3 py-1.5 rounded-full" style={{ background: 'var(--brand-light)', color: 'var(--brand)' }}>
-              💡 {card.hint}
-            </p>
-          )}
-          {!flipped && <p className="text-xs mt-4" style={{ color: 'var(--text-muted)' }}>Tap to reveal answer</p>}
-        </div>
+        <FlipCard
+          flipped={flipped}
+          onFlip={() => setFlipped(!flipped)}
+          front={card?.front}
+          back={card?.back}
+          hint={card?.hint}
+        />
 
         {/* SRS rating buttons (shown after flip) */}
         {flipped ? (
@@ -325,23 +363,14 @@ function DueCardsReview({ cards, onClose, onDone }: { cards: any[]; onClose: () 
           </div>
         ) : (
           <>
-            <div
-              className="rounded-2xl border p-8 min-h-52 flex flex-col items-center justify-center text-center cursor-pointer transition-all hover:scale-[1.01] select-none"
-              style={{ background: 'var(--bg-surface)', borderColor: 'var(--border)', boxShadow: 'var(--shadow-lg)' }}
-              onClick={() => setFlipped(!flipped)}
-            >
-              <p className="text-xs font-bold uppercase tracking-widest mb-1" style={{ color: 'var(--text-muted)' }}>{card?.setTitle}</p>
-              <p className="text-xs font-bold uppercase tracking-widest mb-4" style={{ color: flipped ? 'var(--success)' : 'var(--brand)' }}>
-                {flipped ? 'Answer' : 'Question'}
-              </p>
-              <p className="text-lg font-semibold leading-snug" style={{ color: 'var(--text-primary)' }}>
-                {flipped ? card?.back : card?.front}
-              </p>
-              {!flipped && card?.hint && (
-                <p className="text-xs mt-4 px-3 py-1.5 rounded-full" style={{ background: 'var(--brand-light)', color: 'var(--brand)' }}>💡 {card.hint}</p>
-              )}
-              {!flipped && <p className="text-xs mt-4" style={{ color: 'var(--text-muted)' }}>Tap to reveal answer</p>}
-            </div>
+            <FlipCard
+              flipped={flipped}
+              onFlip={() => setFlipped(!flipped)}
+              setLabel={card?.setTitle}
+              front={card?.front}
+              back={card?.back}
+              hint={card?.hint}
+            />
 
             {flipped ? (
               <div className="grid grid-cols-4 gap-2">

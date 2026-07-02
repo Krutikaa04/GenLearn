@@ -33,6 +33,10 @@
   --shadow-sm: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
   --shadow-md: 0 4px 12px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.04);
   --shadow-lg: 0 12px 32px rgba(0,0,0,0.1), 0 4px 8px rgba(0,0,0,0.04);
+  --shadow-glow: 0 8px 24px rgba(124,58,237,0.28), 0 2px 8px rgba(124,58,237,0.2);
+  --glass-bg: rgba(255,255,255,0.65);
+  --glass-border: rgba(255,255,255,0.5);
+  --brand-gradient: linear-gradient(135deg, #7c3aed 0%, #a855f7 55%, #c084fc 100%);
 }
 
 /* ── Dark tokens ── */
@@ -58,6 +62,10 @@
   --shadow-sm: 0 1px 3px rgba(0,0,0,0.3);
   --shadow-md: 0 4px 12px rgba(0,0,0,0.4);
   --shadow-lg: 0 12px 32px rgba(0,0,0,0.5);
+  --shadow-glow: 0 8px 28px rgba(167,139,250,0.35), 0 2px 10px rgba(167,139,250,0.25);
+  --glass-bg: rgba(23,22,42,0.55);
+  --glass-border: rgba(167,139,250,0.18);
+  --brand-gradient: linear-gradient(135deg, #a78bfa 0%, #c084fc 55%, #e0aaff 100%);
 }
 
 * { box-sizing: border-box; }

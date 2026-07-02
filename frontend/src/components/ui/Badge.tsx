@@ -1,7 +1,11 @@
+import { motion } from 'framer-motion';
+import { scaleIn } from '../../lib/motion';
+
 interface BadgeProps {
   label: string;
   color?: 'gray' | 'blue' | 'green' | 'yellow' | 'red' | 'purple';
   size?: 'sm' | 'md';
+  pop?: boolean;
 }
 
 const colors = {
@@ -13,13 +17,27 @@ const colors = {
   purple: { bg: 'var(--brand-light)',     text: 'var(--brand)',          border: 'transparent' },
 };
 
-export function Badge({ label, color = 'gray', size = 'sm' }: BadgeProps) {
+export function Badge({ label, color = 'gray', size = 'sm', pop }: BadgeProps) {
   const c = colors[color];
+  const className = `inline-flex items-center font-medium rounded-full border ${size === 'sm' ? 'px-2 py-0.5 text-xs' : 'px-2.5 py-1 text-xs'}`;
+  const style = { background: c.bg, color: c.text, borderColor: c.border };
+
+  if (pop) {
+    return (
+      <motion.span
+        className={className}
+        style={style}
+        initial="hidden"
+        animate="visible"
+        variants={scaleIn}
+      >
+        {label}
+      </motion.span>
+    );
+  }
+
   return (
-    <span
-      className={`inline-flex items-center font-medium rounded-full border ${size === 'sm' ? 'px-2 py-0.5 text-xs' : 'px-2.5 py-1 text-xs'}`}
-      style={{ background: c.bg, color: c.text, borderColor: c.border }}
-    >
+    <span className={className} style={style}>
       {label}
     </span>
   );

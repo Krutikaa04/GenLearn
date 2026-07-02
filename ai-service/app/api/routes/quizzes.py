@@ -4,6 +4,7 @@ from typing import Any, Optional
 from uuid import uuid4
 from app.middleware.auth import verify_internal_key
 from app.services.gemini import generate_json
+from app.services.mongodb import get_db
 
 router = APIRouter(dependencies=[Depends(verify_internal_key)])
 
@@ -35,6 +36,7 @@ QUIZ_PROMPT = """You are an expert educator creating a multiple-choice quiz.
 Topic: {topic}
 Difficulty: {difficulty}
 Number of questions: {count}
+{context_block}
 
 Return ONLY valid JSON (no markdown, no explanation):
 {{
@@ -124,6 +126,18 @@ def distribute_challenge_questions(num_topics: int, total: int) -> list[int]:
     return counts
 
 
+async def _get_document_context(document_ids: list[str], db) -> str:
+    parts = []
+    for doc_id in document_ids:
+        chunks = await db["document_chunks"].find(
+            {"documentId": doc_id}, {"content": 1, "chunkIndex": 1}
+        ).sort("chunkIndex", 1).limit(15).to_list(length=15)
+        chunk_text = "\n\n".join(c["content"] for c in chunks)
+        if chunk_text:
+            parts.append(chunk_text)
+    return "\n\n---\n\n".join(parts)
+
+
 @router.post("/generate", response_model=GenerateQuizResponse)
 async def generate_quiz(request: GenerateQuizRequest):
     if request.challengeMode and request.challengeTopics:
@@ -142,10 +156,17 @@ async def generate_quiz(request: GenerateQuizRequest):
             difficulty=request.difficulty,
         )
     else:
+        context_block = ""
+        if request.documentIds:
+            context = await _get_document_context(request.documentIds, get_db())
+            if context:
+                context_block = f"Ground the questions in this source material where relevant:\n{context[:8000]}"
+
         prompt = QUIZ_PROMPT.format(
             topic=request.topic,
             difficulty=request.difficulty,
             count=request.questionCount,
+            context_block=context_block,
         )
 
     try:

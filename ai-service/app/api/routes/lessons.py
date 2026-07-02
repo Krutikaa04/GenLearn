@@ -3,6 +3,7 @@ from pydantic import BaseModel
 from typing import Any, Optional
 from app.middleware.auth import verify_internal_key
 from app.services.gemini import generate_json
+from app.services.mongodb import get_db
 
 router = APIRouter(dependencies=[Depends(verify_internal_key)])
 
@@ -30,6 +31,7 @@ LESSON_PROMPT = """You are an expert educator. Generate a comprehensive lesson o
 Topic: {topic}
 Difficulty: {difficulty}
 {goal_line}
+{context_block}
 
 Return ONLY valid JSON (no markdown, no explanation):
 {{
@@ -56,10 +58,31 @@ Requirements:
 """
 
 
+async def _get_document_context(document_ids: list[str], db) -> str:
+    parts = []
+    for doc_id in document_ids:
+        chunks = await db["document_chunks"].find(
+            {"documentId": doc_id}, {"content": 1, "chunkIndex": 1}
+        ).sort("chunkIndex", 1).limit(15).to_list(length=15)
+        chunk_text = "\n\n".join(c["content"] for c in chunks)
+        if chunk_text:
+            parts.append(chunk_text)
+    return "\n\n---\n\n".join(parts)
+
+
 @router.post("/generate", response_model=GenerateLessonResponse)
 async def generate_lesson(request: GenerateLessonRequest):
     goal_line = f"Learning goal: {request.learningGoal}" if request.learningGoal else ""
-    prompt = LESSON_PROMPT.format(topic=request.topic, difficulty=request.difficulty, goal_line=goal_line)
+
+    context_block = ""
+    if request.documentIds:
+        context = await _get_document_context(request.documentIds, get_db())
+        if context:
+            context_block = f"Ground the lesson in this source material where relevant:\n{context[:8000]}"
+
+    prompt = LESSON_PROMPT.format(
+        topic=request.topic, difficulty=request.difficulty, goal_line=goal_line, context_block=context_block
+    )
     try:
         data = await generate_json(prompt, temperature=0.6)
     except Exception as e:

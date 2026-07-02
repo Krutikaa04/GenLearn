@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod/v4';
+import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { User, Plus, X, AlertTriangle } from 'lucide-react';
 import api from '../../lib/axios';
@@ -13,18 +14,15 @@ import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Card } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
-import { useModalA11y } from '../../components/ui/useModalA11y';
-import { ErrorBoundary } from '../../components/ErrorBoundary';
+import { Modal } from '../../components/ui/Modal';
+import { staggerContainer, staggerItem } from '../../lib/motion';
 
 function DeleteAccountModal({ email, onClose, onConfirm, loading }: { email: string; onClose: () => void; onConfirm: () => void; loading: boolean }) {
   const [confirmText, setConfirmText] = useState('');
-  const panelRef = useModalA11y(onClose);
   const canDelete = confirmText.trim().toLowerCase() === email.toLowerCase();
 
   return (
-    <div className="fixed inset-0 flex items-center justify-center p-4 z-50" style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }} onClick={onClose}>
-      <ErrorBoundary compact>
-      <div ref={panelRef} onClick={(e) => e.stopPropagation()} className="w-full max-w-md rounded-2xl border p-6 space-y-4" style={{ background: 'var(--bg-surface)', borderColor: 'var(--border)' }}>
+    <Modal onClose={onClose} maxWidth="max-w-md" className="p-6 space-y-4">
         <div className="flex items-center gap-2">
           <AlertTriangle className="w-5 h-5" style={{ color: 'var(--danger)' }} />
           <h3 className="font-semibold" style={{ color: 'var(--text-primary)' }}>Delete your account?</h3>
@@ -53,9 +51,7 @@ function DeleteAccountModal({ email, onClose, onConfirm, loading }: { email: str
             Delete account
           </Button>
         </div>
-      </div>
-      </ErrorBoundary>
-    </div>
+    </Modal>
   );
 }
 
@@ -154,14 +150,15 @@ export function ProfilePage() {
   const initials = user ? `${user.firstName[0]}${user.lastName[0]}`.toUpperCase() : '?';
 
   return (
-    <div className="max-w-xl space-y-6">
+    <motion.div className="max-w-xl space-y-6" initial="hidden" animate="visible" variants={staggerContainer}>
       <div>
         <h1 className="text-2xl font-bold mb-1" style={{ color: 'var(--text-primary)' }}>Account</h1>
         <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Manage your profile and learning preferences.</p>
       </div>
 
       {/* Avatar + identity */}
-      <Card padding="lg" className="flex items-center gap-4">
+      <motion.div variants={staggerItem}>
+      <Card padding="lg" glass className="flex items-center gap-4">
         <div className="w-16 h-16 rounded-2xl flex items-center justify-center text-xl font-bold text-white shrink-0"
           style={{ background: 'var(--brand)' }}>
           {initials}
@@ -175,8 +172,10 @@ export function ProfilePage() {
           </p>
         </div>
       </Card>
+      </motion.div>
 
-      <Card padding="lg" className="space-y-3">
+      <motion.div variants={staggerItem}>
+      <Card padding="lg" glass className="space-y-3">
         <h2 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Email address</h2>
         {emailChangeRequested ? (
           <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
@@ -204,8 +203,9 @@ export function ProfilePage() {
           </div>
         )}
       </Card>
+      </motion.div>
 
-      <form onSubmit={handleSubmit((d) => mutation.mutate(d))} className="space-y-5">
+      <motion.form variants={staggerItem} onSubmit={handleSubmit((d) => mutation.mutate(d))} className="space-y-5">
         <Card padding="lg" className="space-y-4">
           <h2 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
             <User className="w-4 h-4 inline mr-1.5" />Personal info
@@ -300,8 +300,9 @@ export function ProfilePage() {
         >
           Save changes
         </Button>
-      </form>
+      </motion.form>
 
+      <motion.div variants={staggerItem}>
       <Card padding="lg" className="space-y-3">
         <h2 className="text-sm font-semibold flex items-center gap-1.5" style={{ color: 'var(--danger)' }}>
           <AlertTriangle className="w-4 h-4" />Danger zone
@@ -313,6 +314,7 @@ export function ProfilePage() {
           Delete account
         </Button>
       </Card>
+      </motion.div>
 
       {showDeleteModal && user && (
         <DeleteAccountModal
@@ -322,6 +324,6 @@ export function ProfilePage() {
           loading={deleteMutation.isPending}
         />
       )}
-    </div>
+    </motion.div>
   );
 }

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { BrainCircuit, Plus, Trash2, Loader2, CheckCircle, XCircle, X, Trophy, Zap, AlertTriangle, ClipboardList, FileText } from 'lucide-react';
+import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { quizzesApi } from '../../api/quizzes.api';
@@ -10,9 +11,9 @@ import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
 import { Input } from '../../components/ui/Input';
-import { useModalA11y } from '../../components/ui/useModalA11y';
-import { ErrorBoundary } from '../../components/ErrorBoundary';
+import { Modal } from '../../components/ui/Modal';
 import { usePaginatedList } from '../../hooks/usePaginatedList';
+import { staggerContainer, staggerItem } from '../../lib/motion';
 
 const statusColor: Record<string, any> = { pending: 'gray', generating: 'yellow', ready: 'green', failed: 'red' };
 
@@ -55,12 +56,9 @@ function GenerateModal({ onClose, defaultTopic = '', defaultDocId = '' }: { onCl
   };
 
   const canGenerate = mode === 'normal' ? !!topic.trim() : challengeTopics.length > 0;
-  const panelRef = useModalA11y(onClose);
 
   return (
-    <div className="fixed inset-0 flex items-center justify-center p-4 z-50" style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }} onClick={onClose}>
-      <ErrorBoundary compact>
-      <div ref={panelRef} onClick={(e) => e.stopPropagation()} className="w-full max-w-md rounded-2xl border p-6 space-y-5 max-h-[90vh] overflow-y-auto" style={{ background: 'var(--bg-surface)', borderColor: 'var(--border)' }}>
+    <Modal onClose={onClose} maxWidth="max-w-md" className="p-6 space-y-5 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between">
           <div>
             <h3 className="font-semibold" style={{ color: 'var(--text-primary)' }}>Generate Quiz</h3>
@@ -187,9 +185,7 @@ function GenerateModal({ onClose, defaultTopic = '', defaultDocId = '' }: { onCl
           <Button variant="outline" onClick={onClose} className="flex-1">Cancel</Button>
           <Button onClick={() => mutation.mutate()} loading={mutation.isPending} disabled={!canGenerate} className="flex-1">Generate</Button>
         </div>
-      </div>
-      </ErrorBoundary>
-    </div>
+    </Modal>
   );
 }
 
@@ -243,12 +239,9 @@ function ReviewModal({ quizId, onClose }: { quizId: string; onClose: () => void 
     queryKey: ['quiz-review', quizId],
     queryFn: () => quizzesApi.reviewQuiz(quizId).then((r) => r.data.data),
   });
-  const panelRef = useModalA11y(onClose);
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }} onClick={onClose}>
-      <ErrorBoundary compact>
-      <div ref={panelRef} onClick={(e) => e.stopPropagation()} className="w-full max-w-xl rounded-2xl border" style={{ background: 'var(--bg-surface)', borderColor: 'var(--border)' }}>
+    <Modal onClose={onClose} maxWidth="max-w-xl">
         <div className="flex items-center justify-between p-5 border-b" style={{ borderColor: 'var(--border)' }}>
           <div>
             <h3 className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>Quiz Results</h3>
@@ -305,9 +298,7 @@ function ReviewModal({ quizId, onClose }: { quizId: string; onClose: () => void 
 
           <Button onClick={onClose} className="w-full">Close</Button>
         </div>
-      </div>
-      </ErrorBoundary>
-    </div>
+    </Modal>
   );
 }
 
@@ -405,12 +396,10 @@ function QuizTaker({ quizId, onClose }: { quizId: string; onClose: () => void })
     return () => window.removeEventListener('keydown', onKey);
   }, [result, current, answers, isChallenge, quiz?.questions]);
 
-  const panelRef = useModalA11y(onClose);
-
   if (isLoading) return (
-    <div className="fixed inset-0 flex items-center justify-center z-50" style={{ background: 'rgba(0,0,0,0.6)' }}>
-      <Loader2 className="w-8 h-8 animate-spin text-white" />
-    </div>
+    <Modal onClose={onClose} maxWidth="max-w-sm" className="p-10 flex items-center justify-center">
+      <Loader2 className="w-8 h-8 animate-spin" style={{ color: 'var(--brand)' }} />
+    </Modal>
   );
 
   const questions = quiz?.questions ?? [];
@@ -422,9 +411,7 @@ function QuizTaker({ quizId, onClose }: { quizId: string; onClose: () => void })
   const timeWarning = timeLeft !== null && timeLeft < 60;
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}>
-      <ErrorBoundary compact>
-      <div ref={panelRef} className="w-full max-w-xl rounded-2xl border" style={{ background: 'var(--bg-surface)', borderColor: 'var(--border)' }}>
+    <Modal onClose={onClose} maxWidth="max-w-xl">
         {/* Header */}
         <div className="flex items-center justify-between p-5 border-b" style={{ borderColor: 'var(--border)' }}>
           <div>
@@ -547,9 +534,7 @@ function QuizTaker({ quizId, onClose }: { quizId: string; onClose: () => void })
             </p>
           </div>
         )}
-      </div>
-      </ErrorBoundary>
-    </div>
+    </Modal>
   );
 }
 
@@ -597,9 +582,10 @@ export function QuizzesPage() {
           <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>Generate your first quiz to start testing</p>
         </div>
       ) : (
-        <div className="space-y-2">
+        <motion.div className="space-y-2" initial="hidden" animate="visible" variants={staggerContainer}>
           {quizzes.map((quiz: any) => (
-            <Card key={quiz.quizId} padding="md" className="flex items-center gap-4">
+            <motion.div key={quiz.quizId} variants={staggerItem}>
+            <Card padding="md" className="flex items-center gap-4">
               <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
                 style={{ background: quiz.challengeMode ? 'rgba(245,158,11,0.12)' : 'rgba(124,58,237,0.1)' }}>
                 {quiz.challengeMode
@@ -646,8 +632,9 @@ export function QuizzesPage() {
                 style={{ color: 'var(--text-muted)' }}
               ><Trash2 className="w-4 h-4" /></button>
             </Card>
+            </motion.div>
           ))}
-        </div>
+        </motion.div>
       )}
 
       {hasNextPage && (
