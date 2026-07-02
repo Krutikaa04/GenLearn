@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { BookOpen, Plus, Trash2, Clock, Loader2, ChevronDown, ChevronRight, X, FileText, BrainCircuit } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { lessonsApi } from '../../api/lessons.api';
 import { documentsApi } from '../../api/documents.api';
@@ -10,9 +11,9 @@ import { Card } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
 import { Input } from '../../components/ui/Input';
 import { MarkdownContent } from '../../components/ui/MarkdownContent';
-import { useModalA11y } from '../../components/ui/useModalA11y';
+import { Modal } from '../../components/ui/Modal';
 import { usePaginatedList } from '../../hooks/usePaginatedList';
-import { ErrorBoundary } from '../../components/ErrorBoundary';
+import { staggerContainer, staggerItem, fadeInUp } from '../../lib/motion';
 
 const statusColor: Record<string, any> = { pending: 'gray', generating: 'yellow', ready: 'green', failed: 'red' };
 
@@ -22,7 +23,6 @@ function GenerateModal({ onClose, defaultTopic = '', defaultDocId = '' }: { onCl
   const [difficulty, setDifficulty] = useState('beginner');
   const [selectedDocIds, setSelectedDocIds] = useState<string[]>(defaultDocId ? [defaultDocId] : []);
   const [docPanelOpen, setDocPanelOpen] = useState(!!defaultDocId);
-  const panelRef = useModalA11y(onClose);
 
   const { data: docs = [] } = useQuery({
     queryKey: ['documents'],
@@ -40,9 +40,7 @@ function GenerateModal({ onClose, defaultTopic = '', defaultDocId = '' }: { onCl
   });
 
   return (
-    <div className="fixed inset-0 flex items-center justify-center p-4 z-50" style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }} onClick={onClose}>
-      <ErrorBoundary compact>
-      <div ref={panelRef} onClick={(e) => e.stopPropagation()} className="w-full max-w-md rounded-2xl border p-6 space-y-5" style={{ background: 'var(--bg-surface)', borderColor: 'var(--border)' }}>
+    <Modal onClose={onClose} maxWidth="max-w-md" className="p-6 space-y-5">
         <div className="flex items-center justify-between">
           <div>
             <h3 className="font-semibold" style={{ color: 'var(--text-primary)' }}>Generate Lesson</h3>
@@ -105,9 +103,7 @@ function GenerateModal({ onClose, defaultTopic = '', defaultDocId = '' }: { onCl
           <Button variant="outline" onClick={onClose} className="flex-1">Cancel</Button>
           <Button onClick={() => mutation.mutate()} loading={mutation.isPending} disabled={!topic.trim()} className="flex-1">Generate</Button>
         </div>
-      </div>
-      </ErrorBoundary>
-    </div>
+    </Modal>
   );
 }
 
@@ -235,9 +231,10 @@ export function LessonsPage() {
           <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>Generate your first lesson to begin</p>
         </div>
       ) : (
-        <div className="space-y-2">
+        <motion.div className="space-y-2" initial="hidden" animate="visible" variants={staggerContainer}>
           {lessons.map((lesson: any) => (
-            <Card key={lesson.lessonId} className="overflow-hidden">
+            <motion.div key={lesson.lessonId} variants={staggerItem}>
+            <Card className="overflow-hidden">
               <div
                 className="flex items-start gap-3 p-4 cursor-pointer hover:bg-[var(--bg-subtle)] transition-colors"
                 onClick={() => {
@@ -289,14 +286,24 @@ export function LessonsPage() {
                   <Trash2 className="w-4 h-4" />
                 </button>
               </div>
+              <AnimatePresence initial={false}>
               {openId === lesson.lessonId && (
-                <div className="p-4 border-t" style={{ borderColor: 'var(--border)' }}>
+                <motion.div
+                  className="p-4 border-t overflow-hidden"
+                  style={{ borderColor: 'var(--border)' }}
+                  initial="hidden"
+                  animate="visible"
+                  exit="hidden"
+                  variants={fadeInUp}
+                >
                   <LessonExpander lessonId={lesson.lessonId} />
-                </div>
+                </motion.div>
               )}
+              </AnimatePresence>
             </Card>
+            </motion.div>
           ))}
-        </div>
+        </motion.div>
       )}
 
       {hasNextPage && (

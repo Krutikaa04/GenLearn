@@ -12,16 +12,27 @@ class TestLessonPrompt:
         assert "{topic}" in LESSON_PROMPT
         assert "{difficulty}" in LESSON_PROMPT
         assert "{goal_line}" in LESSON_PROMPT
+        assert "{context_block}" in LESSON_PROMPT
 
     def test_formats_correctly(self):
         formatted = LESSON_PROMPT.format(
             topic="Recursion",
             difficulty="beginner",
             goal_line="Learning goal: Understand base cases",
+            context_block="",
         )
         assert "Recursion" in formatted
         assert "beginner" in formatted
         assert "Learning goal: Understand base cases" in formatted
+
+    def test_context_block_appears_when_documents_grounded(self):
+        formatted = LESSON_PROMPT.format(
+            topic="Recursion",
+            difficulty="beginner",
+            goal_line="",
+            context_block="Ground the lesson in this source material where relevant:\nBase cases prevent infinite recursion.",
+        )
+        assert "Base cases prevent infinite recursion." in formatted
 
     def test_requests_json_output(self):
         assert "JSON" in LESSON_PROMPT
@@ -55,13 +66,13 @@ class TestGenerateLessonRequest:
 
     def test_goal_line_is_empty_when_no_goal(self):
         goal_line = ""
-        formatted = LESSON_PROMPT.format(topic="X", difficulty="beginner", goal_line=goal_line)
+        formatted = LESSON_PROMPT.format(topic="X", difficulty="beginner", goal_line=goal_line, context_block="")
         assert "Learning goal:" not in formatted
 
     def test_goal_line_appears_when_goal_provided(self):
         goal = "Master the concept"
         goal_line = f"Learning goal: {goal}" if goal else ""
-        formatted = LESSON_PROMPT.format(topic="X", difficulty="beginner", goal_line=goal_line)
+        formatted = LESSON_PROMPT.format(topic="X", difficulty="beginner", goal_line=goal_line, context_block="")
         assert "Master the concept" in formatted
 
 

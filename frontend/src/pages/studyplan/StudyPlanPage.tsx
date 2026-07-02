@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { CalendarDays, Plus, X, BookOpen, BrainCircuit, Layers, FileText, Zap } from 'lucide-react';
+import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import { studyplanApi } from '../../api/studyplan.api';
@@ -9,6 +10,7 @@ import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Card } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
+import { staggerContainer, staggerItem } from '../../lib/motion';
 
 const taskIcon: Record<string, any> = {
   lesson: BookOpen,
@@ -86,9 +88,9 @@ export function StudyPlanPage() {
           </Button>
         </div>
 
-        <div className="space-y-3">
+        <motion.div className="space-y-3" initial="hidden" animate="visible" variants={staggerContainer}>
           {plan.plan.map((day: any) => (
-            <div key={day.day} className="rounded-2xl border overflow-hidden" style={{ borderColor: 'var(--border)' }}>
+            <motion.div key={day.day} variants={staggerItem} className="rounded-2xl border overflow-hidden backdrop-blur-xl" style={{ borderColor: 'var(--glass-border)', background: 'var(--glass-bg)' }}>
               <div className="flex items-center gap-3 px-4 py-3" style={{ background: 'var(--bg-subtle)' }}>
                 <div className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold"
                   style={{ background: 'var(--brand-light)', color: 'var(--brand)' }}>
@@ -127,9 +129,9 @@ export function StudyPlanPage() {
                   );
                 })}
               </div>
-            </div>
+            </motion.div>
           ))}
-        </div>
+        </motion.div>
       </div>
     );
   }
@@ -143,7 +145,7 @@ export function StudyPlanPage() {
         </p>
       </div>
 
-      <Card padding="lg" className="space-y-5">
+      <Card padding="lg" glass className="space-y-5">
         <Input
           label="What do you want to learn?"
           placeholder="e.g. Learn React Hooks in 2 weeks, Master SQL joins…"

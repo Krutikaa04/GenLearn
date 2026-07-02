@@ -1,15 +1,16 @@
 import { useState, useRef, useCallback } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { FileText, Upload, Trash2, MessageSquare, Loader2, CloudUpload, X, Send, BookOpen, BrainCircuit, Layers, Search } from 'lucide-react';
+import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import { documentsApi } from '../../api/documents.api';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
-import { useModalA11y } from '../../components/ui/useModalA11y';
+import { Modal } from '../../components/ui/Modal';
 import { usePaginatedList } from '../../hooks/usePaginatedList';
-import { ErrorBoundary } from '../../components/ErrorBoundary';
+import { staggerContainer, staggerItem } from '../../lib/motion';
 
 const statusColor: Record<string, any> = {
   uploaded: 'blue', processing: 'yellow', embedding: 'yellow', ready: 'green', failed: 'red',
@@ -24,7 +25,6 @@ function AskModal({ docId, docName, onClose }: { docId: string; docName: string;
     if (question.trim() && !confirm('Discard your unsent question?')) return;
     onClose();
   };
-  const panelRef = useModalA11y(closeWithConfirm);
 
   const ask = async () => {
     if (!question.trim()) return;
@@ -43,18 +43,7 @@ function AskModal({ docId, docName, onClose }: { docId: string; docName: string;
   };
 
   return (
-    <div
-      className="fixed inset-0 flex items-center justify-center p-4 z-50"
-      style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}
-      onClick={closeWithConfirm}
-    >
-      <ErrorBoundary compact>
-      <div
-        ref={panelRef}
-        onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-lg rounded-2xl border flex flex-col"
-        style={{ background: 'var(--bg-surface)', borderColor: 'var(--border)', maxHeight: '80vh' }}
-      >
+    <Modal onClose={closeWithConfirm} maxWidth="max-w-lg" className="flex flex-col max-h-[80vh]">
         <div className="flex items-center justify-between p-5 border-b" style={{ borderColor: 'var(--border)' }}>
           <div>
             <h3 className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>Ask about this document</h3>
@@ -107,9 +96,7 @@ function AskModal({ docId, docName, onClose }: { docId: string; docName: string;
             <Send className="w-4 h-4" />
           </Button>
         </div>
-      </div>
-      </ErrorBoundary>
-    </div>
+    </Modal>
   );
 }
 
@@ -241,9 +228,10 @@ export function DocumentsPage() {
           <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>Try a different name or status filter</p>
         </div>
       ) : (
-        <div className="space-y-2">
+        <motion.div className="space-y-2" initial="hidden" animate="visible" variants={staggerContainer}>
           {filtered.map((doc: any) => (
-            <Card key={doc.documentId} padding="md" className="flex items-center gap-4">
+            <motion.div key={doc.documentId} variants={staggerItem}>
+            <Card padding="md" className="flex items-center gap-4">
               <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={{ background: 'var(--bg-subtle)' }}>
                 <FileText className="w-4 h-4" style={{ color: 'var(--text-muted)' }} />
               </div>
@@ -303,8 +291,9 @@ export function DocumentsPage() {
                 </button>
               </div>
             </Card>
+            </motion.div>
           ))}
-        </div>
+        </motion.div>
       )}
 
       {!search && statusFilter === 'all' && hasNextPage && (

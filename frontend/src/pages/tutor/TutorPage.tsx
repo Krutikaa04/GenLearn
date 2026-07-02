@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { BotMessageSquare, Send, Loader2, FileText, ChevronDown, History, Trash2, X, Plus } from 'lucide-react';
+import { BotMessageSquare, Send, FileText, ChevronDown, History, Trash2, X, Plus } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { conversationApi } from '../../api/conversation.api';
 import { documentsApi } from '../../api/documents.api';
@@ -10,6 +11,23 @@ import { MarkdownContent } from '../../components/ui/MarkdownContent';
 import { useModalA11y } from '../../components/ui/useModalA11y';
 import { ErrorBoundary } from '../../components/ErrorBoundary';
 import { usePaginatedList } from '../../hooks/usePaginatedList';
+import { fadeInUp } from '../../lib/motion';
+
+function TypingDots() {
+  return (
+    <div className="flex items-center gap-1 px-1 py-1">
+      {[0, 1, 2].map((i) => (
+        <motion.span
+          key={i}
+          className="w-1.5 h-1.5 rounded-full"
+          style={{ background: 'var(--brand)' }}
+          animate={{ y: [0, -4, 0], opacity: [0.4, 1, 0.4] }}
+          transition={{ duration: 0.9, repeat: Infinity, delay: i * 0.15, ease: 'easeInOut' }}
+        />
+      ))}
+    </div>
+  );
+}
 
 interface Message {
   role: 'user' | 'assistant';
@@ -298,9 +316,19 @@ export function TutorPage() {
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto py-4 space-y-4">
+      <div
+        className="flex-1 overflow-y-auto py-4 px-4 space-y-4 rounded-3xl backdrop-blur-xl"
+        style={{ background: 'var(--glass-bg)', border: '1px solid var(--glass-border)' }}
+      >
+        <AnimatePresence initial={false}>
         {messages.map((msg, i) => (
-          <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} gap-2`}>
+          <motion.div
+            key={i}
+            initial="hidden"
+            animate="visible"
+            variants={fadeInUp}
+            className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} gap-2`}
+          >
             {msg.role === 'assistant' && (
               <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 mt-0.5" style={{ background: 'var(--brand-light)' }}>
                 <BotMessageSquare className="w-3.5 h-3.5" style={{ color: 'var(--brand)' }} />
@@ -334,18 +362,19 @@ export function TutorPage() {
                 </div>
               )}
             </div>
-          </div>
+          </motion.div>
         ))}
         {loading && (
-          <div className="flex justify-start gap-2">
+          <motion.div initial="hidden" animate="visible" variants={fadeInUp} className="flex justify-start gap-2">
             <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0" style={{ background: 'var(--brand-light)' }}>
               <BotMessageSquare className="w-3.5 h-3.5" style={{ color: 'var(--brand)' }} />
             </div>
             <div className="rounded-2xl px-4 py-3 border" style={{ background: 'var(--bg-surface)', borderColor: 'var(--border)' }}>
-              <Loader2 className="w-4 h-4 animate-spin" style={{ color: 'var(--brand)' }} />
+              <TypingDots />
             </div>
-          </div>
+          </motion.div>
         )}
+        </AnimatePresence>
         <div ref={bottomRef} />
       </div>
 

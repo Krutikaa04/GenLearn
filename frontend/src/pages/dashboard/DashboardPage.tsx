@@ -1,24 +1,28 @@
 import { useQuery } from '@tanstack/react-query';
 import { FileText, BookOpen, BrainCircuit, Layers, TrendingUp, ArrowRight, Zap, AlertTriangle } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { analyticsApi } from '../../api/analytics.api';
 import { useAuthStore } from '../../store/auth.store';
 import { Card } from '../../components/ui/Card';
 import { Link } from 'react-router-dom';
+import { staggerContainer, staggerItem } from '../../lib/motion';
 
 function StatCard({ label, value, icon: Icon, to, color }: any) {
   return (
-    <Link to={to}>
-      <Card hover padding="md" className="group">
-        <div className="flex items-start justify-between mb-4">
-          <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: color + '20' }}>
-            <Icon className="w-5 h-5" style={{ color }} />
+    <motion.div variants={staggerItem}>
+      <Link to={to}>
+        <Card hover padding="md" className="group">
+          <div className="flex items-start justify-between mb-4">
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: color + '20' }}>
+              <Icon className="w-5 h-5" style={{ color }} />
+            </div>
+            <ArrowRight className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: 'var(--text-muted)' }} />
           </div>
-          <ArrowRight className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: 'var(--text-muted)' }} />
-        </div>
-        <p className="text-2xl font-bold mb-0.5" style={{ color: 'var(--text-primary)' }}>{value}</p>
-        <p className="text-sm" style={{ color: 'var(--text-muted)' }}>{label}</p>
-      </Card>
-    </Link>
+          <p className="text-2xl font-bold mb-0.5" style={{ color: 'var(--text-primary)' }}>{value}</p>
+          <p className="text-sm" style={{ color: 'var(--text-muted)' }}>{label}</p>
+        </Card>
+      </Link>
+    </motion.div>
   );
 }
 
@@ -31,9 +35,12 @@ function MasteryBar({ topic, score }: { topic: string; score: number }) {
         <span className="text-xs font-semibold" style={{ color }}>{score}%</span>
       </div>
       <div className="h-1.5 rounded-full" style={{ background: 'var(--bg-subtle)' }}>
-        <div
-          className="h-1.5 rounded-full transition-all duration-700"
-          style={{ width: `${score}%`, background: color }}
+        <motion.div
+          className="h-1.5 rounded-full"
+          style={{ background: color }}
+          initial={{ width: 0 }}
+          animate={{ width: `${score}%` }}
+          transition={{ type: 'spring', stiffness: 90, damping: 22 }}
         />
       </div>
     </div>
@@ -71,15 +78,19 @@ export function DashboardPage() {
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div className="flex items-start justify-between">
-        <div>
+      <div className="relative flex items-start justify-between overflow-hidden rounded-3xl px-1 py-1">
+        <div
+          className="pointer-events-none absolute -top-24 -left-16 w-72 h-72 rounded-full opacity-20 blur-3xl"
+          style={{ background: 'var(--brand-gradient)' }}
+        />
+        <div className="relative">
           <h1 className="text-2xl font-bold mb-1" style={{ color: 'var(--text-primary)' }}>
             {greeting}, {user?.firstName} 👋
           </h1>
           <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Here's your learning summary</p>
         </div>
         <div
-          className="flex items-center gap-2 px-4 py-2.5 rounded-2xl border text-sm font-medium"
+          className="relative flex items-center gap-2 px-4 py-2.5 rounded-2xl border text-sm font-medium"
           style={{ background: 'var(--bg-surface)', borderColor: 'var(--border)', color: 'var(--text-secondary)' }}
         >
           <Zap className="w-4 h-4" style={{ color: 'var(--warning)' }} />
@@ -87,10 +98,10 @@ export function DashboardPage() {
         </div>
       </div>
 
-      {/* Hero metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {/* Hero metrics — bento: mastery card wider than streak */}
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
         {/* Streak */}
-        <Card padding="lg">
+        <Card padding="lg" glass className="md:col-span-2">
           <div className="flex items-center gap-4">
             <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl"
               style={{ background: 'rgba(245,158,11,0.12)' }}>
@@ -109,7 +120,7 @@ export function DashboardPage() {
         </Card>
 
         {/* Mastery */}
-        <Card padding="lg">
+        <Card padding="lg" glass className="md:col-span-3">
           <div className="flex items-center gap-4">
             <div className="w-14 h-14 rounded-2xl flex items-center justify-center"
               style={{ background: 'var(--brand-light)' }}>
@@ -123,9 +134,12 @@ export function DashboardPage() {
                 <p className="text-sm mb-1" style={{ color: 'var(--text-muted)' }}>overall mastery</p>
               </div>
               <div className="h-2 rounded-full overflow-hidden" style={{ background: 'var(--bg-subtle)' }}>
-                <div
-                  className="h-2 rounded-full transition-all duration-700"
-                  style={{ width: `${data?.overallMasteryScore ?? 0}%`, background: 'var(--brand)' }}
+                <motion.div
+                  className="h-2 rounded-full"
+                  style={{ background: 'var(--brand-gradient)' }}
+                  initial={{ width: 0 }}
+                  animate={{ width: `${data?.overallMasteryScore ?? 0}%` }}
+                  transition={{ type: 'spring', stiffness: 80, damping: 20 }}
                 />
               </div>
             </div>
@@ -134,9 +148,14 @@ export function DashboardPage() {
       </div>
 
       {/* Stats grid */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <motion.div
+        className="grid grid-cols-2 md:grid-cols-4 gap-3"
+        initial="hidden"
+        animate="visible"
+        variants={staggerContainer}
+      >
         {stats.map((s) => <StatCard key={s.label} {...s} />)}
-      </div>
+      </motion.div>
 
       {/* Weak topics alert */}
       {weakTopics.length > 0 && (
