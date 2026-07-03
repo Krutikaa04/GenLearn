@@ -303,6 +303,7 @@ function ReviewModal({ quizId, onClose }: { quizId: string; onClose: () => void 
 }
 
 function QuizTaker({ quizId, onClose }: { quizId: string; onClose: () => void }) {
+  const qc = useQueryClient();
   const { data, isLoading } = useQuery({
     queryKey: ['quiz', quizId],
     queryFn: () => quizzesApi.getById(quizId).then((r) => r.data.data),
@@ -323,6 +324,7 @@ function QuizTaker({ quizId, onClose }: { quizId: string; onClose: () => void })
     try {
       const res = await quizzesApi.submit(quizId, payload);
       setResult(res.data.data);
+      qc.invalidateQueries({ queryKey: ['progress'] });
     } catch (err: any) {
       toast.error(err.response?.data?.error?.message || 'Submit failed');
     } finally {

@@ -11,6 +11,8 @@ import { useAuthStore } from '../../store/auth.store';
 import { authApi } from '../../api/auth.api';
 import { flashcardsApi } from '../../api/flashcards.api';
 import { ThemeToggle } from '../ui/ThemeToggle';
+import { XpBadgeDisplay } from '../gamification/XpBadgeDisplay';
+import { useGamificationToasts } from '../../hooks/useGamification';
 import { springSoft } from '../../lib/motion';
 
 const nav = [
@@ -124,6 +126,7 @@ function SidebarContent({ dueCards, initials, user, onNavigate, handleLogout, is
 
       {/* Footer */}
       <div className="p-3 border-t space-y-0.5" style={{ borderColor: 'var(--border)' }}>
+        <XpBadgeDisplay />
         <ThemeToggle />
         {/* User row */}
         <NavLink
@@ -162,6 +165,8 @@ export function AppLayout() {
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  useGamificationToasts();
 
   const { data: dueCards = [] } = useQuery({
     queryKey: ['flashcards-due'],

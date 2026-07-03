@@ -18,6 +18,14 @@ class TopicMastery {
   lastAttemptAt: Date;
 }
 
+export class EarnedBadge {
+  @Prop({ required: true })
+  badgeId: string;
+
+  @Prop({ required: true })
+  earnedAt: Date;
+}
+
 @Schema({ timestamps: true, collection: 'student_progress' })
 export class StudentProgress {
   @Prop({ required: true, unique: true })
@@ -49,6 +57,15 @@ export class StudentProgress {
 
   @Prop({ default: 0, min: 0, max: 100 })
   overallMasteryScore: number;
+
+  @Prop({ default: 0 })
+  totalFlashcardsReviewed: number;
+
+  @Prop({ default: 0 })
+  xpTotal: number;
+
+  @Prop({ type: [EarnedBadge], default: [] })
+  badges: EarnedBadge[];
 }
 
 export type StudentProgressDocument = StudentProgress & Document;

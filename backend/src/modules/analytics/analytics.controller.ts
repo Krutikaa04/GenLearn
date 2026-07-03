@@ -22,4 +22,10 @@ export class AnalyticsController {
     const result = await this.analyticsService.getWeakTopics(user.userId);
     return { data: result };
   }
+
+  @Get('badges/catalog')
+  @ApiOperation({ summary: 'Get the full static badge catalog (earned and unearned)' })
+  getBadgeCatalog() {
+    return { data: this.analyticsService.getBadgeCatalog() };
+  }
 }

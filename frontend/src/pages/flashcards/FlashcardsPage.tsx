@@ -186,6 +186,7 @@ const SRS_RATINGS = [
 ];
 
 function FlashcardReview({ setId, onClose }: { setId: string; onClose: () => void }) {
+  const qc = useQueryClient();
   const { data, isLoading } = useQuery({
     queryKey: ['flashcard-set', setId],
     queryFn: () => flashcardsApi.getById(setId).then((r) => r.data.data),
@@ -204,12 +205,13 @@ function FlashcardReview({ setId, onClose }: { setId: string; onClose: () => voi
     setReviewed((s) => new Set([...s, index]));
     try {
       await flashcardsApi.reviewCard(setId, card.cardId, r);
+      qc.invalidateQueries({ queryKey: ['progress'] });
     } catch {
       // fail silently — SRS update is best-effort
     }
     setIndex((i) => (i < cards.length - 1 ? i + 1 : i));
     setFlipped(false);
-  }, [card, index, setId, cards.length]);
+  }, [card, index, setId, cards.length, qc]);
 
   // Keyboard shortcuts: Space to flip, 1-4 to rate (when flipped), arrows to navigate
   useEffect(() => {
@@ -306,6 +308,7 @@ function FlashcardReview({ setId, onClose }: { setId: string; onClose: () => voi
 }
 
 function DueCardsReview({ cards, onClose, onDone }: { cards: any[]; onClose: () => void; onDone: () => void }) {
+  const qc = useQueryClient();
   const [index, setIndex] = useState(0);
   const [flipped, setFlipped] = useState(false);
   const [reviewed, setReviewed] = useState<Set<number>>(new Set());
@@ -319,10 +322,11 @@ function DueCardsReview({ cards, onClose, onDone }: { cards: any[]; onClose: () 
     setReviewed((s) => new Set([...s, index]));
     try {
       await flashcardsApi.reviewCard(card.setId, card.cardId, r);
+      qc.invalidateQueries({ queryKey: ['progress'] });
     } catch { /* best-effort */ }
     setIndex((i) => (i < cards.length - 1 ? i + 1 : i));
     setFlipped(false);
-  }, [card, index, cards.length]);
+  }, [card, index, cards.length, qc]);
 
   useEffect(() => {
     if (allDone) return;

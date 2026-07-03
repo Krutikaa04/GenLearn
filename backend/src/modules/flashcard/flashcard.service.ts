@@ -101,6 +101,11 @@ export class FlashcardService {
     );
 
     await this.flashcardRepository.reviewCard(setId, cardId, easeFactor, interval, repetitions, nextReviewAt);
+
+    this.analyticsService
+      .recordActivity(studentId, 'flashcard_review')
+      .catch((err) => this.logger.warn(`Analytics update failed for card review: ${(err as Error).message}`));
+
     return { cardId, easeFactor, interval, repetitions, nextReviewAt };
   }
 

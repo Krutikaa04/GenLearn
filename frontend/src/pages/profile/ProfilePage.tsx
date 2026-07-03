@@ -15,6 +15,7 @@ import { Input } from '../../components/ui/Input';
 import { Card } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
 import { Modal } from '../../components/ui/Modal';
+import { BadgeShowcase } from '../../components/gamification/BadgeShowcase';
 import { staggerContainer, staggerItem } from '../../lib/motion';
 
 function DeleteAccountModal({ email, onClose, onConfirm, loading }: { email: string; onClose: () => void; onConfirm: () => void; loading: boolean }) {
@@ -301,6 +302,10 @@ export function ProfilePage() {
           Save changes
         </Button>
       </motion.form>
+
+      <motion.div variants={staggerItem}>
+        <BadgeShowcase />
+      </motion.div>
 
       <motion.div variants={staggerItem}>
       <Card padding="lg" className="space-y-3">

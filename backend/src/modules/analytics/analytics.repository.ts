@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { StudentProgress, StudentProgressDocument } from './schemas/progress.schema';
+import { EarnedBadge, StudentProgress, StudentProgressDocument } from './schemas/progress.schema';
 
 @Injectable()
 export class AnalyticsRepository {
@@ -22,10 +22,32 @@ export class AnalyticsRepository {
 
   async incrementCounter(
     studentId: string,
-    field: 'totalQuizzesTaken' | 'totalDocumentsUploaded' | 'totalLessonsGenerated' | 'totalFlashcardSetsCreated',
+    field:
+      | 'totalQuizzesTaken'
+      | 'totalDocumentsUploaded'
+      | 'totalLessonsGenerated'
+      | 'totalFlashcardSetsCreated'
+      | 'totalFlashcardsReviewed',
   ): Promise<void> {
     await this.progressModel
       .updateOne({ studentId }, { $inc: { [field]: 1 } }, { upsert: true })
+      .exec();
+  }
+
+  async incrementXp(studentId: string, amount: number): Promise<StudentProgressDocument> {
+    return this.progressModel
+      .findOneAndUpdate(
+        { studentId },
+        { $inc: { xpTotal: amount } },
+        { upsert: true, new: true },
+      )
+      .exec() as Promise<StudentProgressDocument>;
+  }
+
+  async addBadges(studentId: string, badges: EarnedBadge[]): Promise<void> {
+    if (!badges.length) return;
+    await this.progressModel
+      .updateOne({ studentId }, { $push: { badges: { $each: badges } } }, { upsert: true })
       .exec();
   }
 
@@ -33,7 +55,7 @@ export class AnalyticsRepository {
     studentId: string,
     topic: string,
     scorePercent: number,
-  ): Promise<void> {
+  ): Promise<{ currentStreak: number; longestStreak: number }> {
     const progress = await this.findOrCreate(studentId);
 
     // Update streak
@@ -82,6 +104,8 @@ export class AnalyticsRepository {
       ? Math.round(updatedTopics.reduce((sum, t) => sum + t.masteryScore, 0) / updatedTopics.length)
       : 0;
 
+    const newLongestStreak = Math.max(progress.longestStreak, newStreak);
+
     await this.progressModel.updateOne(
       { studentId },
       {
@@ -89,12 +113,14 @@ export class AnalyticsRepository {
           topicMastery: updatedTopics,
           overallMasteryScore: overallMastery,
           currentStreak: newStreak,
-          longestStreak: Math.max(progress.longestStreak, newStreak),
+          longestStreak: newLongestStreak,
           lastActiveDate: new Date(),
         },
         $inc: { totalQuizzesTaken: 1 },
       },
       { upsert: true },
     ).exec();
+
+    return { currentStreak: newStreak, longestStreak: newLongestStreak };
   }
 }
