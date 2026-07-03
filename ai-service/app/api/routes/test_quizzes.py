@@ -1,4 +1,4 @@
-from app.api.routes.quizzes import distribute_challenge_questions
+from app.api.routes.quizzes import distribute_challenge_questions, normalize_concept_metadata
 
 
 def test_zero_topics_returns_empty_list():
@@ -39,3 +39,49 @@ def test_more_topics_than_questions_drops_lowest_priority_to_zero_but_never_nega
 
 def test_zero_total_returns_all_zero_counts():
     assert distribute_challenge_questions(4, 0) == [0, 0, 0, 0]
+
+
+def test_normalize_keeps_well_formed_metadata():
+    q = {
+        "conceptIds": ["Recursion-Base-Case", "recursion"],
+        "primaryConceptId": "recursion-base-case",
+        "cognitiveLevel": "Apply",
+    }
+    normalize_concept_metadata(q)
+    assert q["conceptIds"] == ["recursion-base-case", "recursion"]
+    assert q["primaryConceptId"] == "recursion-base-case"
+    assert q["cognitiveLevel"] == "apply"
+
+
+def test_normalize_degrades_missing_metadata_to_legacy_shape():
+    q = {"text": "What is recursion?"}
+    normalize_concept_metadata(q)
+    assert q["conceptIds"] == []
+    assert q["primaryConceptId"] is None
+    assert q["cognitiveLevel"] is None
+
+
+def test_normalize_prepends_primary_when_absent_from_concept_ids():
+    q = {"conceptIds": ["loops"], "primaryConceptId": "recursion", "cognitiveLevel": "understand"}
+    normalize_concept_metadata(q)
+    assert q["conceptIds"][0] == "recursion"
+    assert q["primaryConceptId"] == "recursion"
+
+
+def test_normalize_falls_back_to_first_concept_as_primary():
+    q = {"conceptIds": ["recursion", "loops"]}
+    normalize_concept_metadata(q)
+    assert q["primaryConceptId"] == "recursion"
+
+
+def test_normalize_rejects_invalid_cognitive_level_and_non_string_ids():
+    q = {"conceptIds": ["ok", 42, "  ", None], "cognitiveLevel": "hallucinate"}
+    normalize_concept_metadata(q)
+    assert q["conceptIds"] == ["ok"]
+    assert q["cognitiveLevel"] is None
+
+
+def test_normalize_caps_concept_ids_at_three():
+    q = {"conceptIds": ["a", "b", "c", "d", "e"]}
+    normalize_concept_metadata(q)
+    assert q["conceptIds"] == ["a", "b", "c"]

@@ -48,7 +48,10 @@ Return ONLY valid JSON (no markdown, no explanation):
       "options": ["string", "string", "string", "string"],
       "correctIndex": integer,
       "explanation": "string",
-      "topic": "{topic}"
+      "topic": "{topic}",
+      "conceptIds": ["kebab-case-concept-slug"],
+      "primaryConceptId": "kebab-case-concept-slug",
+      "cognitiveLevel": "remember | understand | apply | analyze"
     }}
   ]
 }}
@@ -58,6 +61,9 @@ Requirements:
 - correctIndex is 0, 1, 2, or 3 — one correct answer per question
 - Plausible distractors, varied question types
 - Match difficulty: {difficulty}
+- conceptIds: 1-3 short kebab-case slugs naming the specific concepts within "{topic}" this question tests (e.g. "recursion-base-case"), most specific first
+- primaryConceptId: the single concept the question primarily tests — must appear in conceptIds
+- cognitiveLevel: exactly one of remember, understand, apply, analyze
 """
 
 CHALLENGE_PROMPT = """You are an expert educator creating a multi-topic challenge quiz.
@@ -78,7 +84,10 @@ Return ONLY valid JSON (no markdown, no explanation):
       "options": ["string", "string", "string", "string"],
       "correctIndex": integer,
       "explanation": "string",
-      "topic": "the specific topic this question covers"
+      "topic": "the specific topic this question covers",
+      "conceptIds": ["kebab-case-concept-slug"],
+      "primaryConceptId": "kebab-case-concept-slug",
+      "cognitiveLevel": "remember | understand | apply | analyze"
     }}
   ]
 }}
@@ -89,7 +98,44 @@ Requirements:
 - Distribute questions across topics as specified
 - Questions should be mixed (not grouped by topic)
 - Plausible distractors, varied difficulty within {difficulty} level
+- conceptIds: 1-3 short kebab-case slugs naming the specific concepts this question tests, most specific first
+- primaryConceptId: the single concept the question primarily tests — must appear in conceptIds
+- cognitiveLevel: exactly one of remember, understand, apply, analyze
 """
+
+
+ALLOWED_COGNITIVE_LEVELS = {"remember", "understand", "apply", "analyze"}
+
+
+def normalize_concept_metadata(question: dict) -> dict:
+    """Coerce LLM-provided concept metadata into a safe, consistent shape.
+
+    Malformed or missing metadata degrades to the legacy no-metadata question
+    (empty conceptIds, null primary/level) instead of failing generation —
+    the backend treats absence as "no concept data".
+    """
+    raw_ids = question.get("conceptIds")
+    concept_ids = [
+        c.strip().lower() for c in raw_ids if isinstance(c, str) and c.strip()
+    ][:3] if isinstance(raw_ids, list) else []
+
+    primary = question.get("primaryConceptId")
+    primary = primary.strip().lower() if isinstance(primary, str) and primary.strip() else None
+    if primary and primary not in concept_ids:
+        concept_ids.insert(0, primary)
+        concept_ids = concept_ids[:3]
+    if primary is None and concept_ids:
+        primary = concept_ids[0]
+
+    level = question.get("cognitiveLevel")
+    level = level.strip().lower() if isinstance(level, str) else None
+    if level not in ALLOWED_COGNITIVE_LEVELS:
+        level = None
+
+    question["conceptIds"] = concept_ids
+    question["primaryConceptId"] = primary
+    question["cognitiveLevel"] = level
+    return question
 
 
 def distribute_challenge_questions(num_topics: int, total: int) -> list[int]:
@@ -176,6 +222,7 @@ async def generate_quiz(request: GenerateQuizRequest):
 
     for q in data.get("questions", []):
         q["questionId"] = str(uuid4())
+        normalize_concept_metadata(q)
 
     try:
         result = GenerateQuizResponse(

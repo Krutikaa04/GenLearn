@@ -286,4 +286,52 @@ describe('QuizService', () => {
       await expect(service.delete('quiz-1', 'student-1')).rejects.toThrow('Access denied');
     });
   });
+
+  // ─── concept-metadata compatibility contract ─────────────────────────────────
+
+  describe('concept metadata compatibility', () => {
+    const questionsWithConcepts = [
+      { questionId: 'q1', text: 'What is base case?', options: ['A', 'B', 'C', 'D'], correctIndex: 0, explanation: 'A is correct', conceptIds: ['recursion-base-case'], primaryConceptId: 'recursion-base-case', cognitiveLevel: 'understand' },
+      { questionId: 'q2', text: 'What is recursion?', options: ['W', 'X', 'Y', 'Z'], correctIndex: 2, explanation: 'Y is correct', conceptIds: ['recursion'], primaryConceptId: 'recursion', cognitiveLevel: 'remember' },
+    ];
+
+    it('never leaks concept metadata into serialized questions (findOne)', async () => {
+      repository.findById.mockResolvedValue(makeQuiz({ questions: questionsWithConcepts }));
+
+      const result = await service.findOne('quiz-1', 'student-1');
+
+      for (const q of result.questions!) {
+        expect(Object.keys(q).sort()).toEqual(['options', 'questionId', 'text']);
+      }
+    });
+
+    it('keeps the exact submit response shape for metadata-carrying quizzes', async () => {
+      repository.findById.mockResolvedValue(makeQuiz({ questions: questionsWithConcepts }));
+      repository.findByIdWithAnswers.mockResolvedValue(makeQuizWithAnswers({ questions: questionsWithConcepts } as any));
+
+      const result = await service.submit('quiz-1', 'student-1', {
+        answers: [
+          { questionId: 'q1', selectedIndex: 0 },
+          { questionId: 'q2', selectedIndex: 1 },
+        ],
+      } as any);
+
+      expect(Object.keys(result).sort()).toEqual(['answers', 'quizId', 'score', 'scorePercent', 'totalQuestions']);
+      expect(result.score).toBe(1);
+    });
+
+    it('submits legacy quizzes without concept metadata unchanged', async () => {
+      repository.findById.mockResolvedValue(makeQuiz());
+      repository.findByIdWithAnswers.mockResolvedValue(makeQuizWithAnswers());
+
+      const result = await service.submit('quiz-1', 'student-1', {
+        answers: [
+          { questionId: 'q1', selectedIndex: 0 },
+          { questionId: 'q2', selectedIndex: 2 },
+        ],
+      } as any);
+
+      expect(result.scorePercent).toBe(100);
+    });
+  });
 });

@@ -15,6 +15,13 @@ export enum DifficultyLevel {
   ADVANCED = 'advanced',
 }
 
+export enum CognitiveLevel {
+  REMEMBER = 'remember',
+  UNDERSTAND = 'understand',
+  APPLY = 'apply',
+  ANALYZE = 'analyze',
+}
+
 class QuizQuestion {
   @Prop({ required: true })
   questionId: string;
@@ -33,6 +40,18 @@ class QuizQuestion {
 
   @Prop({ type: String, default: null })
   topic: string | null;
+
+  // Adaptive-learning concept metadata. Optional and internal-only (never
+  // serialized to API responses); legacy quizzes without it keep working —
+  // consumers must treat absence as "no concept data" and fall back to topic.
+  @Prop({ type: [String], default: [] })
+  conceptIds: string[];
+
+  @Prop({ type: String, default: null })
+  primaryConceptId: string | null;
+
+  @Prop({ type: String, enum: [...Object.values(CognitiveLevel), null], default: null })
+  cognitiveLevel: CognitiveLevel | null;
 }
 
 class QuizAnswer {
