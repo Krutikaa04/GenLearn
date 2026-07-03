@@ -13,6 +13,7 @@ import { Badge } from '../../components/ui/Badge';
 import { Input } from '../../components/ui/Input';
 import { Modal } from '../../components/ui/Modal';
 import { usePaginatedList } from '../../hooks/usePaginatedList';
+import { useQuizTelemetry } from '../../hooks/useQuizTelemetry';
 import { staggerContainer, staggerItem } from '../../lib/motion';
 
 const statusColor: Record<string, any> = { pending: 'gray', generating: 'yellow', ready: 'green', failed: 'red' };
@@ -317,6 +318,8 @@ function QuizTaker({ quizId, onClose }: { quizId: string; onClose: () => void })
 
   const quiz = data;
   const isChallenge = quiz?.challengeMode;
+
+  useQuizTelemetry({ quiz, current, answers, timeLeft, result });
 
   const submit = async () => {
     const payload = Object.entries(answers).map(([questionId, selectedIndex]) => ({ questionId, selectedIndex }));
