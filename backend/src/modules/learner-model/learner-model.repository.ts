@@ -2,12 +2,19 @@ import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { ConceptMastery, ConceptMasteryDocument, MisconceptionFlag } from './schemas/concept-mastery.schema';
+import {
+  DecisionStatus,
+  PedagogicalDecision,
+  PedagogicalDecisionDocument,
+} from './schemas/pedagogical-decision.schema';
 
 @Injectable()
 export class LearnerModelRepository {
   constructor(
     @InjectModel(ConceptMastery.name)
     private readonly masteryModel: Model<ConceptMasteryDocument>,
+    @InjectModel(PedagogicalDecision.name)
+    private readonly decisionModel: Model<PedagogicalDecisionDocument>,
   ) {}
 
   async findOrCreate(studentId: string, conceptId: string): Promise<ConceptMasteryDocument> {
@@ -39,6 +46,23 @@ export class LearnerModelRepository {
         },
         { upsert: true },
       )
+      .exec();
+  }
+
+  async findPendingDecision(studentId: string): Promise<PedagogicalDecisionDocument | null> {
+    return this.decisionModel
+      .findOne({ studentId, status: DecisionStatus.PENDING })
+      .sort({ createdAt: -1 })
+      .exec();
+  }
+
+  async createDecision(decision: Partial<PedagogicalDecision>): Promise<PedagogicalDecisionDocument> {
+    return this.decisionModel.create(decision);
+  }
+
+  async dismissDecision(decisionId: string): Promise<void> {
+    await this.decisionModel
+      .updateOne({ decisionId }, { $set: { status: DecisionStatus.DISMISSED } })
       .exec();
   }
 }

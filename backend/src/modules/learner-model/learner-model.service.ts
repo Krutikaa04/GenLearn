@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
+import { v4 as uuidv4 } from 'uuid';
 import { LearnerModelRepository } from './learner-model.repository';
 import { Quiz, QuizDocument } from '../quiz/schemas/quiz.schema';
 import {
@@ -8,6 +9,8 @@ import {
   topicToConceptId,
   updateConceptEvidence,
 } from './mastery-update';
+import { ConceptSnapshot, decideNextActivity } from './pedagogical-policy';
+import { DecisionStatus, DecisionTrigger } from './schemas/pedagogical-decision.schema';
 
 export interface SessionBehaviorInput {
   perQuestion: {
@@ -56,6 +59,9 @@ export class LearnerModelService {
     );
     const questionById = new Map(quiz.questions.map((q) => [q.questionId, q]));
 
+    // Post-update snapshot per touched concept — the policy's input.
+    const touched = new Map<string, ConceptSnapshot>();
+
     for (const answer of quiz.answers) {
       const question = questionById.get(answer.questionId);
       if (!question) continue;
@@ -65,6 +71,7 @@ export class LearnerModelService {
       const primary = question.primaryConceptId ?? topicToConceptId(question.topic ?? quiz.topic);
       const secondaries = (question.conceptIds ?? []).filter((c) => c !== primary);
       const signal = behaviorByQuestion.get(answer.questionId) ?? null;
+      const topic = question.topic ?? quiz.topic;
 
       for (const [conceptId, isPrimary] of [
         [primary, true] as const,
@@ -75,17 +82,69 @@ export class LearnerModelService {
           { mastery: current.mastery, confidence: current.confidence, evidenceCount: current.evidenceCount },
           { correct: answer.isCorrect, isPrimary, behavior: signal },
         );
+        const flagged = result.misconception && isPrimary;
         await this.repository.applyEvidence(
           studentId,
           conceptId,
           { mastery: result.mastery, confidence: result.confidence, evidenceCount: result.evidenceCount },
-          result.misconception && isPrimary
-            ? { quizId, questionId: answer.questionId, flaggedAt: new Date() }
-            : null,
+          flagged ? { quizId, questionId: answer.questionId, flaggedAt: new Date() } : null,
         );
+
+        const prev = touched.get(conceptId);
+        touched.set(conceptId, {
+          conceptId,
+          topic,
+          mastery: result.mastery,
+          confidence: result.confidence,
+          hasRecentMisconception: (prev?.hasRecentMisconception ?? false) || flagged,
+        });
       }
     }
 
     this.logger.log(`Learner model updated from quiz ${quizId} (${quiz.answers.length} answers)`);
+
+    await this.recordDecision(studentId, quizId, [...touched.values()]);
+  }
+
+  /**
+   * Runs the pedagogical policy over the concepts a quiz just touched and
+   * persists at most one PENDING decision per student. A fresh misconception
+   * supersedes a lower-priority pending recommendation; anything else defers
+   * to the existing one so the "next activity" doesn't churn on every quiz.
+   */
+  private async recordDecision(
+    studentId: string,
+    sourceQuizId: string,
+    touched: ConceptSnapshot[],
+  ): Promise<void> {
+    const decision = decideNextActivity(touched);
+    if (!decision) return;
+
+    const pending = await this.repository.findPendingDecision(studentId);
+    if (pending) {
+      const supersede =
+        decision.trigger === DecisionTrigger.MISCONCEPTION && pending.trigger !== DecisionTrigger.MISCONCEPTION;
+      if (!supersede) return;
+      await this.repository.dismissDecision(pending.decisionId);
+    }
+
+    await this.repository.createDecision({
+      decisionId: uuidv4(),
+      studentId,
+      conceptId: decision.conceptId,
+      topic: decision.topic,
+      trigger: decision.trigger,
+      action: decision.action,
+      difficulty: decision.difficulty,
+      status: DecisionStatus.PENDING,
+      masteryBefore: decision.masteryBefore,
+      masteryAfter: null,
+      sourceQuizId,
+      generatedActivityId: null,
+    });
+
+    this.logger.log(
+      `Pedagogical decision for ${studentId}: ${decision.trigger} → ${decision.action} on "${decision.conceptId}" (${decision.difficulty})`,
+    );
   }
 }

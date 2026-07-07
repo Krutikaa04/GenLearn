@@ -2,7 +2,14 @@ import { LearnerModelService } from './learner-model.service';
 
 describe('LearnerModelService', () => {
   let service: LearnerModelService;
-  let repository: { findOrCreate: jest.Mock; applyEvidence: jest.Mock; findByStudent: jest.Mock };
+  let repository: {
+    findOrCreate: jest.Mock;
+    applyEvidence: jest.Mock;
+    findByStudent: jest.Mock;
+    findPendingDecision: jest.Mock;
+    createDecision: jest.Mock;
+    dismissDecision: jest.Mock;
+  };
   let quizModel: { findOne: jest.Mock };
 
   const makeQuiz = (overrides: Partial<any> = {}) => ({
@@ -31,6 +38,9 @@ describe('LearnerModelService', () => {
       findOrCreate: jest.fn().mockResolvedValue({ mastery: 50, confidence: 0.5, evidenceCount: 5 }),
       applyEvidence: jest.fn().mockResolvedValue(undefined),
       findByStudent: jest.fn().mockResolvedValue([]),
+      findPendingDecision: jest.fn().mockResolvedValue(null),
+      createDecision: jest.fn().mockResolvedValue(undefined),
+      dismissDecision: jest.fn().mockResolvedValue(undefined),
     };
     quizModel = { findOne: jest.fn().mockReturnValue({ exec: jest.fn().mockResolvedValue(makeQuiz()) }) };
     service = new LearnerModelService(repository as any, quizModel as any);
@@ -87,5 +97,51 @@ describe('LearnerModelService', () => {
     quizModel.findOne.mockReturnValue({ exec: jest.fn().mockResolvedValue(null) });
     await service.updateFromQuizSubmission('student-1', 'missing-quiz', null);
     expect(repository.applyEvidence).not.toHaveBeenCalled();
+  });
+
+  describe('pedagogical decisions', () => {
+    it('persists a practice decision after a mid-band update', async () => {
+      // fresh state 50 + correct step 8 → 58 (mid band) → practice quiz
+      await service.updateFromQuizSubmission('student-1', 'quiz-1', behavior);
+
+      expect(repository.createDecision).toHaveBeenCalledWith(
+        expect.objectContaining({
+          studentId: 'student-1',
+          trigger: 'practice',
+          action: 'quiz',
+          difficulty: 'intermediate',
+          sourceQuizId: 'quiz-1',
+          status: 'pending',
+        }),
+      );
+    });
+
+    it('defers to an existing pending decision of equal-or-higher priority', async () => {
+      repository.findPendingDecision.mockResolvedValue({ decisionId: 'd-1', trigger: 'practice' });
+
+      await service.updateFromQuizSubmission('student-1', 'quiz-1', behavior);
+
+      expect(repository.createDecision).not.toHaveBeenCalled();
+      expect(repository.dismissDecision).not.toHaveBeenCalled();
+    });
+
+    it('supersedes a pending non-misconception decision when a misconception appears', async () => {
+      repository.findPendingDecision.mockResolvedValue({ decisionId: 'd-1', trigger: 'practice' });
+      quizModel.findOne.mockReturnValue({
+        exec: jest.fn().mockResolvedValue(
+          makeQuiz({ answers: [{ questionId: 'q1', selectedIndex: 3, isCorrect: false }] }),
+        ),
+      });
+      const snapBehavior = {
+        perQuestion: [{ questionId: 'q1', answerChanges: 0, timeToFirstAnswerMs: 1_000, idleMs: 0 }],
+      };
+
+      await service.updateFromQuizSubmission('student-1', 'quiz-1', snapBehavior);
+
+      expect(repository.dismissDecision).toHaveBeenCalledWith('d-1');
+      expect(repository.createDecision).toHaveBeenCalledWith(
+        expect.objectContaining({ trigger: 'misconception', action: 'lesson' }),
+      );
+    });
   });
 });
