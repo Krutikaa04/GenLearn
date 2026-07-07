@@ -127,7 +127,32 @@ export class LearnerModelService {
 
     this.logger.log(`Learner model updated from quiz ${quizId} (${quiz.answers.length} answers)`);
 
+    await this.measureInterventionEffectiveness(studentId, quizId, touched);
     await this.recordDecision(studentId, quizId, [...touched.values()]);
+  }
+
+  /**
+   * Closes the effectiveness loop: if fresh quiz evidence (from a different
+   * quiz than the one that triggered it) touched the pending recommendation's
+   * concept, the intervention is considered assessed — record mastery-after
+   * so the before/after delta measures whether it actually helped.
+   */
+  private async measureInterventionEffectiveness(
+    studentId: string,
+    quizId: string,
+    touched: Map<string, ConceptSnapshot>,
+  ): Promise<void> {
+    const pending = await this.repository.findPendingDecision(studentId);
+    if (!pending || pending.sourceQuizId === quizId) return;
+
+    const snapshot = touched.get(pending.conceptId);
+    if (!snapshot) return;
+
+    await this.repository.completeDecision(pending.decisionId, snapshot.mastery);
+    this.logger.log(
+      `Intervention assessed for ${studentId}: "${pending.conceptId}" ${pending.masteryBefore} → ${snapshot.mastery} ` +
+      `(${pending.trigger}/${pending.action}, Δ${snapshot.mastery - pending.masteryBefore})`,
+    );
   }
 
   /**

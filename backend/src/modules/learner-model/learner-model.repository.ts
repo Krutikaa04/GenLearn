@@ -65,4 +65,10 @@ export class LearnerModelRepository {
       .updateOne({ decisionId }, { $set: { status: DecisionStatus.DISMISSED } })
       .exec();
   }
+
+  async completeDecision(decisionId: string, masteryAfter: number): Promise<void> {
+    await this.decisionModel
+      .updateOne({ decisionId }, { $set: { status: DecisionStatus.COMPLETED, masteryAfter } })
+      .exec();
+  }
 }

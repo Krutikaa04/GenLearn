@@ -9,6 +9,7 @@ describe('LearnerModelService', () => {
     findPendingDecision: jest.Mock;
     createDecision: jest.Mock;
     dismissDecision: jest.Mock;
+    completeDecision: jest.Mock;
   };
   let quizModel: { findOne: jest.Mock };
 
@@ -41,6 +42,7 @@ describe('LearnerModelService', () => {
       findPendingDecision: jest.fn().mockResolvedValue(null),
       createDecision: jest.fn().mockResolvedValue(undefined),
       dismissDecision: jest.fn().mockResolvedValue(undefined),
+      completeDecision: jest.fn().mockResolvedValue(undefined),
     };
     quizModel = { findOne: jest.fn().mockReturnValue({ exec: jest.fn().mockResolvedValue(makeQuiz()) }) };
     service = new LearnerModelService(repository as any, quizModel as any);
@@ -123,6 +125,49 @@ describe('LearnerModelService', () => {
 
       expect(repository.createDecision).not.toHaveBeenCalled();
       expect(repository.dismissDecision).not.toHaveBeenCalled();
+    });
+
+    it('completes a pending decision with masteryAfter when new evidence touches its concept', async () => {
+      repository.findPendingDecision.mockResolvedValue({
+        decisionId: 'd-1',
+        trigger: 'weak_concept',
+        conceptId: 'recursion-base-case',
+        sourceQuizId: 'old-quiz',
+        masteryBefore: 30,
+      });
+
+      await service.updateFromQuizSubmission('student-1', 'quiz-1', behavior);
+
+      // fresh state 50 + calm correct 8 → 58
+      expect(repository.completeDecision).toHaveBeenCalledWith('d-1', 58);
+    });
+
+    it('does not complete a decision from evidence of its own source quiz', async () => {
+      repository.findPendingDecision.mockResolvedValue({
+        decisionId: 'd-1',
+        trigger: 'weak_concept',
+        conceptId: 'recursion-base-case',
+        sourceQuizId: 'quiz-1',
+        masteryBefore: 30,
+      });
+
+      await service.updateFromQuizSubmission('student-1', 'quiz-1', behavior);
+
+      expect(repository.completeDecision).not.toHaveBeenCalled();
+    });
+
+    it('leaves the decision pending when the new quiz touched unrelated concepts', async () => {
+      repository.findPendingDecision.mockResolvedValue({
+        decisionId: 'd-1',
+        trigger: 'weak_concept',
+        conceptId: 'unrelated-concept',
+        sourceQuizId: 'old-quiz',
+        masteryBefore: 30,
+      });
+
+      await service.updateFromQuizSubmission('student-1', 'quiz-1', behavior);
+
+      expect(repository.completeDecision).not.toHaveBeenCalled();
     });
 
     it('supersedes a pending non-misconception decision when a misconception appears', async () => {
