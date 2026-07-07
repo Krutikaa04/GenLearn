@@ -1,11 +1,46 @@
 import { useQuery } from '@tanstack/react-query';
-import { FileText, BookOpen, BrainCircuit, Layers, TrendingUp, ArrowRight, Zap, AlertTriangle } from 'lucide-react';
+import { FileText, BookOpen, BrainCircuit, Layers, TrendingUp, ArrowRight, Zap, AlertTriangle, Sparkles } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { analyticsApi } from '../../api/analytics.api';
+import { adaptiveApi } from '../../api/adaptive.api';
 import { useAuthStore } from '../../store/auth.store';
 import { Card } from '../../components/ui/Card';
 import { Link } from 'react-router-dom';
 import { staggerContainer, staggerItem } from '../../lib/motion';
+
+interface Recommendation {
+  decisionId: string;
+  conceptId: string;
+  topic: string;
+  trigger: string;
+  action: 'lesson' | 'quiz';
+  difficulty: string;
+  message: string;
+}
+
+function RecommendedNext({ rec }: { rec: Recommendation }) {
+  const to = rec.action === 'lesson'
+    ? `/lessons?topic=${encodeURIComponent(rec.topic)}`
+    : `/quizzes?topic=${encodeURIComponent(rec.topic)}`;
+  return (
+    <div className="flex items-center justify-between gap-3 p-3 rounded-xl mb-3" style={{ background: 'var(--brand-light)' }}>
+      <div className="flex items-start gap-2.5 min-w-0">
+        <Sparkles className="w-4 h-4 mt-0.5 shrink-0" style={{ color: 'var(--brand)' }} />
+        <div className="min-w-0">
+          <p className="text-xs font-semibold mb-0.5" style={{ color: 'var(--brand)' }}>Recommended next</p>
+          <p className="text-sm" style={{ color: 'var(--text-primary)' }}>{rec.message}</p>
+        </div>
+      </div>
+      <Link
+        to={to}
+        className="text-xs font-medium px-3 py-1.5 rounded-lg shrink-0 text-white transition-opacity hover:opacity-90"
+        style={{ background: 'var(--brand)' }}
+      >
+        {rec.action === 'lesson' ? 'Start lesson' : 'Take quiz'}
+      </Link>
+    </div>
+  );
+}
 
 function StatCard({ label, value, icon: Icon, to, color }: any) {
   return (
@@ -56,6 +91,10 @@ export function DashboardPage() {
   const { data: weakTopics = [] } = useQuery({
     queryKey: ['weak-topics'],
     queryFn: () => analyticsApi.getWeakTopics().then((r) => r.data.data),
+  });
+  const { data: recommendation } = useQuery<Recommendation | null>({
+    queryKey: ['adaptive-recommendation'],
+    queryFn: () => adaptiveApi.getRecommendation().then((r) => r.data.data),
   });
 
   const hour = new Date().getHours();
@@ -157,13 +196,14 @@ export function DashboardPage() {
         {stats.map((s) => <StatCard key={s.label} {...s} />)}
       </motion.div>
 
-      {/* Weak topics alert */}
-      {weakTopics.length > 0 && (
+      {/* Weak topics alert (+ adaptive recommendation when available) */}
+      {(weakTopics.length > 0 || recommendation) && (
         <Card padding="md">
           <div className="flex items-center gap-2 mb-3">
             <AlertTriangle className="w-4 h-4" style={{ color: 'var(--warning)' }} />
             <h2 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Needs attention</h2>
           </div>
+          {recommendation && <RecommendedNext rec={recommendation} />}
           <div className="space-y-2">
             {weakTopics.slice(0, 3).map((t: any) => (
               <div key={t.topic} className="flex items-center justify-between gap-3">

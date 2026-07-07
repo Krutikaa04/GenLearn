@@ -5,6 +5,7 @@ import { PedagogicalDecision, PedagogicalDecisionSchema } from './schemas/pedago
 import { Quiz, QuizSchema } from '../quiz/schemas/quiz.schema';
 import { LearnerModelRepository } from './learner-model.repository';
 import { LearnerModelService } from './learner-model.service';
+import { AdaptiveController } from './adaptive.controller';
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { LearnerModelService } from './learner-model.service';
       { name: Quiz.name, schema: QuizSchema },
     ]),
   ],
+  controllers: [AdaptiveController],
   providers: [LearnerModelRepository, LearnerModelService],
   exports: [LearnerModelService],
 })

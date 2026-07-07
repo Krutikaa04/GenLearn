@@ -7,6 +7,7 @@ import {
   UnprocessableEntityException,
 } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
+import { ConfigService } from '@nestjs/config';
 import { Queue } from 'bullmq';
 import { v4 as uuidv4 } from 'uuid';
 import { QuizRepository } from './quiz.repository';
@@ -15,6 +16,7 @@ import { GenerateQuizDto } from './dto/generate-quiz.dto';
 import { SubmitQuizDto } from './dto/submit-quiz.dto';
 import { QUIZ_GENERATION_QUEUE, QuizGenerationJob } from './workers/quiz-generator.processor';
 import { AnalyticsService } from '../analytics/analytics.service';
+import { isFeatureEnabled } from '../../common/feature-flags';
 
 @Injectable()
 export class QuizService {
@@ -24,6 +26,7 @@ export class QuizService {
     private readonly quizRepository: QuizRepository,
     private readonly analyticsService: AnalyticsService,
     @InjectQueue(QUIZ_GENERATION_QUEUE) private readonly generationQueue: Queue,
+    private readonly configService: ConfigService,
   ) {}
 
   async generate(studentId: string, dto: GenerateQuizDto) {
@@ -158,6 +161,11 @@ export class QuizService {
         explanation: (questionMap.get(a.questionId) as any)?.explanation,
         correctIndex: (questionMap.get(a.questionId) as any)?.correctIndex,
       })),
+      // Additive: signals that the adaptive pipeline is digesting this result.
+      // Absent entirely when the feature is off — existing consumers unaffected.
+      ...(isFeatureEnabled(this.configService, 'ADAPTIVE_LEARNING_ENABLED')
+        ? { adaptation: { status: 'processing' } }
+        : {}),
     };
 
     this.logger.log(`Quiz ${quizId} submitted: ${correctCount}/${quizWithAnswers.questions.length}`);

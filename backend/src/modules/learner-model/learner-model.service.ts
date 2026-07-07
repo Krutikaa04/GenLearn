@@ -34,6 +34,30 @@ export class LearnerModelService {
     return this.repository.findByStudent(studentId);
   }
 
+  /** The student's current pending recommendation, shaped for the dashboard card. */
+  async getRecommendation(studentId: string) {
+    const decision = await this.repository.findPendingDecision(studentId);
+    if (!decision) return null;
+
+    const conceptLabel = decision.conceptId.replace(/-/g, ' ');
+    const messages: Record<DecisionTrigger, string> = {
+      [DecisionTrigger.MISCONCEPTION]: `You answered confidently but incorrectly on "${conceptLabel}" — a short lesson should clear it up.`,
+      [DecisionTrigger.WEAK_CONCEPT]: `"${conceptLabel}" looks shaky — a quick ${decision.difficulty} quiz will build it up.`,
+      [DecisionTrigger.PRACTICE]: `You're making progress on "${conceptLabel}" — targeted practice will lock it in.`,
+      [DecisionTrigger.ADVANCE]: `You've mastered the basics of "${conceptLabel}" — time to level up.`,
+    };
+
+    return {
+      decisionId: decision.decisionId,
+      conceptId: decision.conceptId,
+      topic: decision.topic,
+      trigger: decision.trigger,
+      action: decision.action,
+      difficulty: decision.difficulty,
+      message: messages[decision.trigger],
+    };
+  }
+
   /**
    * Ingests one submitted quiz as learner-model evidence. Correctness comes
    * from the stored answers; behavior signals (dwell/volatility/hesitation)

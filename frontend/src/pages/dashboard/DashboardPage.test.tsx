@@ -11,11 +11,18 @@ vi.mock('../../api/analytics.api', () => ({
   },
 }));
 
+vi.mock('../../api/adaptive.api', () => ({
+  adaptiveApi: {
+    getRecommendation: vi.fn(),
+  },
+}));
+
 vi.mock('../../store/auth.store', () => ({
   useAuthStore: vi.fn(),
 }));
 
 import { analyticsApi } from '../../api/analytics.api';
+import { adaptiveApi } from '../../api/adaptive.api';
 import { useAuthStore } from '../../store/auth.store';
 
 const mockProgress = {
@@ -49,6 +56,7 @@ beforeEach(() => {
   (useAuthStore as any).mockImplementation((sel: any) => sel({ user: mockUser }));
   (analyticsApi.getProgress as any).mockResolvedValue({ data: { data: mockProgress } });
   (analyticsApi.getWeakTopics as any).mockResolvedValue({ data: { data: [] } });
+  (adaptiveApi.getRecommendation as any).mockResolvedValue({ data: { data: null } });
 });
 
 describe('DashboardPage', () => {
@@ -154,5 +162,37 @@ describe('DashboardPage', () => {
     expect(await screen.findByText('90%')).toBeInTheDocument();
     expect(await screen.findByText('65%')).toBeInTheDocument();
     expect(await screen.findByText('42%')).toBeInTheDocument();
+  });
+
+  it('renders the adaptive recommendation card when one is pending', async () => {
+    (adaptiveApi.getRecommendation as any).mockResolvedValue({
+      data: {
+        data: {
+          decisionId: 'd-1',
+          conceptId: 'bst-definition',
+          topic: 'Binary Search Trees',
+          trigger: 'misconception',
+          action: 'lesson',
+          difficulty: 'beginner',
+          message: 'You answered confidently but incorrectly on "bst definition" — a short lesson should clear it up.',
+        },
+      },
+    });
+
+    render(<DashboardPage />, { wrapper: wrapper() });
+
+    expect(await screen.findByText('Recommended next')).toBeInTheDocument();
+    expect(screen.getByText(/short lesson should clear it up/)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Start lesson' })).toHaveAttribute(
+      'href',
+      '/lessons?topic=Binary%20Search%20Trees',
+    );
+  });
+
+  it('does not render the recommendation card when none is pending', async () => {
+    render(<DashboardPage />, { wrapper: wrapper() });
+
+    expect(await screen.findByText(/Rishi/)).toBeInTheDocument();
+    expect(screen.queryByText('Recommended next')).not.toBeInTheDocument();
   });
 });

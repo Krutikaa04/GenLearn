@@ -14,6 +14,7 @@ describe('QuizService', () => {
   };
   let analytics: { recordQuizResult: jest.Mock };
   let queue: { add: jest.Mock };
+  let config: { get: jest.Mock };
 
   const makeQuiz = (overrides: Partial<any> = {}) => ({
     quizId: 'quiz-1',
@@ -58,7 +59,8 @@ describe('QuizService', () => {
     };
     analytics = { recordQuizResult: jest.fn().mockResolvedValue(undefined) };
     queue = { add: jest.fn().mockResolvedValue({ id: 'job-1' }) };
-    service = new QuizService(repository as any, analytics as any, queue as any);
+    config = { get: jest.fn().mockReturnValue('false') };
+    service = new QuizService(repository as any, analytics as any, queue as any, config as any);
   });
 
   // ─── generate ────────────────────────────────────────────────────────────────
@@ -318,6 +320,23 @@ describe('QuizService', () => {
 
       expect(Object.keys(result).sort()).toEqual(['answers', 'quizId', 'score', 'scorePercent', 'totalQuestions']);
       expect(result.score).toBe(1);
+    });
+
+    it('appends adaptation.status to the submit response only when the flag is on', async () => {
+      config.get.mockImplementation((key: string, def?: string) =>
+        key === 'ADAPTIVE_LEARNING_ENABLED' ? 'true' : def,
+      );
+      repository.findById.mockResolvedValue(makeQuiz());
+      repository.findByIdWithAnswers.mockResolvedValue(makeQuizWithAnswers());
+
+      const result: any = await service.submit('quiz-1', 'student-1', {
+        answers: [
+          { questionId: 'q1', selectedIndex: 0 },
+          { questionId: 'q2', selectedIndex: 2 },
+        ],
+      } as any);
+
+      expect(result.adaptation).toEqual({ status: 'processing' });
     });
 
     it('submits legacy quizzes without concept metadata unchanged', async () => {
