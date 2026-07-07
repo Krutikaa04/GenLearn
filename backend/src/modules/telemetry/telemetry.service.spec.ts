@@ -47,6 +47,17 @@ describe('TelemetryService', () => {
     await expect(service.ingest('student-1', dto)).resolves.toBe(0);
   });
 
+  it('drops the batch after a timeout when the enqueue hangs (Redis reconnecting)', async () => {
+    jest.useFakeTimers();
+    queue.add.mockReturnValue(new Promise(() => {})); // never settles
+
+    const pending = service.ingest('student-1', dto);
+    await jest.advanceTimersByTimeAsync(2_100);
+
+    await expect(pending).resolves.toBe(0);
+    jest.useRealTimers();
+  });
+
   it('defaults quizId to null when not provided', async () => {
     await service.ingest('student-1', { ...dto, quizId: undefined });
 
