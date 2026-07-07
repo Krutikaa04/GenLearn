@@ -18,6 +18,7 @@ export interface SessionBehaviorInput {
     answerChanges: number;
     timeToFirstAnswerMs: number | null;
     idleMs: number;
+    answeredAfterTabSwitch?: boolean;
   }[];
 }
 
@@ -78,7 +79,12 @@ export class LearnerModelService {
     const behaviorByQuestion = new Map<string, QuestionBehaviorSignal>(
       (behavior?.perQuestion ?? []).map((q) => [
         q.questionId,
-        { answerChanges: q.answerChanges, timeToFirstAnswerMs: q.timeToFirstAnswerMs, idleMs: q.idleMs },
+        {
+          answerChanges: q.answerChanges,
+          timeToFirstAnswerMs: q.timeToFirstAnswerMs,
+          idleMs: q.idleMs,
+          answeredAfterTabSwitch: q.answeredAfterTabSwitch === true,
+        },
       ]),
     );
     const questionById = new Map(quiz.questions.map((q) => [q.questionId, q]));
@@ -104,7 +110,12 @@ export class LearnerModelService {
         const current = await this.repository.findOrCreate(studentId, conceptId);
         const result = updateConceptEvidence(
           { mastery: current.mastery, confidence: current.confidence, evidenceCount: current.evidenceCount },
-          { correct: answer.isCorrect, isPrimary, behavior: signal },
+          {
+            correct: answer.isCorrect,
+            isPrimary,
+            behavior: signal,
+            expectedTimeMs: question.expectedSeconds != null ? question.expectedSeconds * 1000 : null,
+          },
         );
         const flagged = result.misconception && isPrimary;
         await this.repository.applyEvidence(
@@ -121,6 +132,7 @@ export class LearnerModelService {
           mastery: result.mastery,
           confidence: result.confidence,
           hasRecentMisconception: (prev?.hasRecentMisconception ?? false) || flagged,
+          integritySuspect: (prev?.integritySuspect ?? false) || result.integritySuspect,
         });
       }
     }

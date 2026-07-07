@@ -21,7 +21,7 @@ interface Recommendation {
 function RecommendedNext({ rec }: { rec: Recommendation }) {
   const to = rec.action === 'lesson'
     ? `/lessons?topic=${encodeURIComponent(rec.topic)}`
-    : `/quizzes?topic=${encodeURIComponent(rec.topic)}`;
+    : `/quizzes?topic=${encodeURIComponent(rec.topic)}&difficulty=${encodeURIComponent(rec.difficulty)}`;
   return (
     <div className="flex items-center justify-between gap-3 p-3 rounded-xl mb-3" style={{ background: 'var(--brand-light)' }}>
       <div className="flex items-start gap-2.5 min-w-0">

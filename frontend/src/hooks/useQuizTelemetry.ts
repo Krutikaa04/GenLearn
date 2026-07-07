@@ -94,11 +94,30 @@ export function useQuizTelemetry({ quiz, current, answers, timeLeft, result }: Q
     s.flush();
   }, [result]);
 
-  // Flush when the tab hides; QUIZ_ABANDONED + final flush on unmount
+  // Tab-switch integrity signals + flush when the tab hides;
+  // QUIZ_ABANDONED + final flush on unmount. Leaving the tab mid-question
+  // (e.g. to look up the answer) is a key trust signal for the learner model.
+  const hiddenAt = useRef<number | null>(null);
+  const quizRef = useRef(quiz);
+  quizRef.current = quiz;
   useEffect(() => {
     if (!enabled) return;
     const onVisibility = () => {
-      if (document.visibilityState === 'hidden') session.current?.flush();
+      const s = session.current;
+      const questionId = quizRef.current?.questions?.[prevIndex.current]?.questionId;
+      if (document.visibilityState === 'hidden') {
+        if (s && !submitted.current) {
+          hiddenAt.current = Date.now();
+          s.emit('TAB_HIDDEN', { questionId, data: { index: prevIndex.current } });
+        }
+        s?.flush();
+      } else if (hiddenAt.current !== null) {
+        s?.emit('TAB_RETURNED', {
+          questionId,
+          data: { index: prevIndex.current, hiddenMs: Date.now() - hiddenAt.current },
+        });
+        hiddenAt.current = null;
+      }
     };
     document.addEventListener('visibilitychange', onVisibility);
     return () => {

@@ -9,6 +9,8 @@ export type TelemetryEventType =
   | 'NAVIGATION'
   | 'IDLE_GAP'
   | 'TIMER_PRESSURE'
+  | 'TAB_HIDDEN'
+  | 'TAB_RETURNED'
   | 'QUIZ_SUBMITTED'
   | 'QUIZ_ABANDONED';
 
@@ -47,7 +49,9 @@ export class TelemetrySession {
     try {
       const now = Date.now();
       const gap = now - this.lastEmitTs;
-      if (gap > IDLE_GAP_MS && type !== 'QUIZ_STARTED') {
+      // A long gap ending in TAB_RETURNED is tab-away time, not on-question
+      // idling — the hidden duration is reported by the event itself.
+      if (gap > IDLE_GAP_MS && type !== 'QUIZ_STARTED' && type !== 'TAB_RETURNED') {
         this.events.push({ type: 'IDLE_GAP', ts: now, questionId: extra.questionId, data: { gapMs: gap } });
       }
       this.lastEmitTs = now;

@@ -52,6 +52,11 @@ class QuizQuestion {
 
   @Prop({ type: String, enum: [...Object.values(CognitiveLevel), null], default: null })
   cognitiveLevel: CognitiveLevel | null;
+
+  /** LLM's estimate of a reasonable read+answer time; the learner model
+   * compares actual answer time against it. Null on legacy questions. */
+  @Prop({ type: Number, default: null })
+  expectedSeconds: number | null;
 }
 
 class QuizAnswer {

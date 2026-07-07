@@ -52,7 +52,8 @@ Return ONLY valid JSON (no markdown, no explanation):
       "topic": "{topic}",
       "conceptIds": ["kebab-case-concept-slug"],
       "primaryConceptId": "kebab-case-concept-slug",
-      "cognitiveLevel": "remember | understand | apply | analyze"
+      "cognitiveLevel": "remember | understand | apply | analyze",
+      "expectedSeconds": integer
     }}
   ]
 }}
@@ -65,6 +66,7 @@ Requirements:
 - conceptIds: 1-3 short kebab-case slugs naming the specific concepts within "{topic}" this question tests (e.g. "recursion-base-case"), most specific first
 - primaryConceptId: the single concept the question primarily tests — must appear in conceptIds
 - cognitiveLevel: exactly one of remember, understand, apply, analyze
+- expectedSeconds: realistic time (15-180) a {difficulty}-level student needs to read and answer this question
 """
 
 CHALLENGE_PROMPT = """You are an expert educator creating a multi-topic challenge quiz.
@@ -88,7 +90,8 @@ Return ONLY valid JSON (no markdown, no explanation):
       "topic": "the specific topic this question covers",
       "conceptIds": ["kebab-case-concept-slug"],
       "primaryConceptId": "kebab-case-concept-slug",
-      "cognitiveLevel": "remember | understand | apply | analyze"
+      "cognitiveLevel": "remember | understand | apply | analyze",
+      "expectedSeconds": integer
     }}
   ]
 }}
@@ -102,6 +105,7 @@ Requirements:
 - conceptIds: 1-3 short kebab-case slugs naming the specific concepts this question tests, most specific first
 - primaryConceptId: the single concept the question primarily tests — must appear in conceptIds
 - cognitiveLevel: exactly one of remember, understand, apply, analyze
+- expectedSeconds: realistic time (15-180) a student needs to read and answer this question
 """
 
 
@@ -133,9 +137,16 @@ def normalize_concept_metadata(question: dict) -> dict:
     if level not in ALLOWED_COGNITIVE_LEVELS:
         level = None
 
+    expected = question.get("expectedSeconds")
+    if isinstance(expected, (int, float)) and expected > 0:
+        expected = int(min(300, max(10, expected)))
+    else:
+        expected = None
+
     question["conceptIds"] = concept_ids
     question["primaryConceptId"] = primary
     question["cognitiveLevel"] = level
+    question["expectedSeconds"] = expected
     return question
 
 

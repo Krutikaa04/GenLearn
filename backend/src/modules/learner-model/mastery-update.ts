@@ -14,6 +14,8 @@ export interface QuestionBehaviorSignal {
   answerChanges: number;
   timeToFirstAnswerMs: number | null;
   idleMs: number;
+  /** The tab left and came back before the first answer (look-it-up signature). */
+  answeredAfterTabSwitch?: boolean;
 }
 
 export interface QuestionEvidence {
@@ -21,20 +23,30 @@ export interface QuestionEvidence {
   /** Primary concept gets the full step; secondary concepts get half. */
   isPrimary: boolean;
   behavior: QuestionBehaviorSignal | null;
+  /** Per-question expected read+answer time from generation metadata (null on legacy quizzes). */
+  expectedTimeMs?: number | null;
 }
 
 export interface EvidenceUpdateResult extends ConceptEvidenceState {
   /** Fast, unhesitating wrong answer — the signature of a misconception. */
   misconception: boolean;
+  /** Correct answer right after a tab-away — mastery can't be trusted from it. */
+  integritySuspect: boolean;
 }
 
 const CORRECT_STEP = 8;
 const WRONG_STEP = 6;
 const SECONDARY_SCALE = 0.5;
-/** Answered faster than this → likely guessing (if right) or misconception (if wrong). */
+/** Fallback snap threshold when a question has no expected time. */
 const SNAP_ANSWER_MS = 2_000;
+/** Fraction of expected time below which an answer counts as a snap. */
+const SNAP_EXPECTED_FRACTION = 0.15;
+/** Multiple of expected time above which the student clearly struggled. */
+const OVERTIME_FACTOR = 2;
 /** Two or more answer switches signal low confidence in the final answer. */
 const VOLATILE_CHANGES = 2;
+/** Evidence weight for a correct answer that followed a tab-away. */
+const TAB_SWITCH_DISCOUNT = 0.25;
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
@@ -50,24 +62,40 @@ export function updateConceptEvidence(
   evidence: QuestionEvidence,
 ): EvidenceUpdateResult {
   const behavior = evidence.behavior;
-  const snapAnswer =
-    behavior?.timeToFirstAnswerMs !== null &&
-    behavior?.timeToFirstAnswerMs !== undefined &&
-    behavior.timeToFirstAnswerMs < SNAP_ANSWER_MS;
+  const answerMs = behavior?.timeToFirstAnswerMs ?? null;
+  const expectedMs = evidence.expectedTimeMs ?? null;
+
+  // Expected-time-aware thresholds: a question the LLM budgeted 90s for,
+  // answered in 8s, is a snap even though 8s beats the fixed floor.
+  const snapThresholdMs = expectedMs
+    ? Math.max(SNAP_ANSWER_MS, expectedMs * SNAP_EXPECTED_FRACTION)
+    : SNAP_ANSWER_MS;
+  const snapAnswer = answerMs !== null && answerMs < snapThresholdMs;
+  const overTime = expectedMs !== null && answerMs !== null && answerMs > expectedMs * OVERTIME_FACTOR;
   const volatile = (behavior?.answerChanges ?? 0) >= VOLATILE_CHANGES;
+  const tabSwitched = behavior?.answeredAfterTabSwitch === true;
 
   let step: number;
   let misconception = false;
+  let integritySuspect = false;
 
   if (evidence.correct) {
     step = CORRECT_STEP;
-    // A correct answer reached through heavy switching or a snap guess is
-    // weaker evidence of understanding — halve the gain.
-    if (volatile || snapAnswer) step *= 0.5;
+    if (tabSwitched) {
+      // Right answer after leaving the tab: possibly looked up — count it,
+      // but barely, and flag the session's difficulty decisions.
+      step *= TAB_SWITCH_DISCOUNT;
+      integritySuspect = true;
+    } else if (volatile || snapAnswer || overTime) {
+      // Heavy switching, a snap guess, or far-over-budget struggle are all
+      // weaker evidence of solid understanding — halve the gain.
+      step *= 0.5;
+    }
   } else {
     step = -WRONG_STEP;
-    // Wrong without any hesitation: the student believed they knew.
-    misconception = snapAnswer && !volatile;
+    // Wrong without any hesitation and without leaving the tab: the student
+    // genuinely believed they knew — that's a misconception, not a lookup.
+    misconception = snapAnswer && !volatile && !tabSwitched;
   }
 
   if (!evidence.isPrimary) step *= SECONDARY_SCALE;
@@ -79,6 +107,7 @@ export function updateConceptEvidence(
     confidence: confidenceForEvidenceCount(evidenceCount),
     evidenceCount,
     misconception,
+    integritySuspect,
   };
 }
 

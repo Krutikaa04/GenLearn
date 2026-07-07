@@ -19,6 +19,15 @@ class QuestionBehaviorFeatures {
 
   @Prop({ default: false })
   underTimerPressure: boolean;
+
+  @Prop({ default: 0 })
+  tabSwitches: number;
+
+  @Prop({ default: 0 })
+  hiddenMs: number;
+
+  @Prop({ default: false })
+  answeredAfterTabSwitch: boolean;
 }
 
 class SessionBehaviorFeatures {
@@ -48,6 +57,12 @@ class SessionBehaviorFeatures {
 
   @Prop({ default: false })
   challengeMode: boolean;
+
+  @Prop({ default: 0 })
+  totalTabSwitches: number;
+
+  @Prop({ default: 0 })
+  tabSwitchAnswerRate: number;
 }
 
 /**

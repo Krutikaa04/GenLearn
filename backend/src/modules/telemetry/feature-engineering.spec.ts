@@ -126,6 +126,51 @@ describe('computeBehaviorFeatures', () => {
     const { perQuestion, session } = computeBehaviorFeatures([]);
 
     expect(perQuestion).toEqual([]);
-    expect(session).toMatchObject({ totalDurationMs: 0, answeredCount: 0, abandoned: false, medianDwellMs: 0 });
+    expect(session).toMatchObject({ totalDurationMs: 0, answeredCount: 0, abandoned: false, medianDwellMs: 0, totalTabSwitches: 0, tabSwitchAnswerRate: 0 });
+  });
+
+  describe('tab-switch integrity signals', () => {
+    it('counts tab switches and hidden time per question', () => {
+      const { perQuestion, session } = computeBehaviorFeatures([
+        ev('QUESTION_VIEWED', 0, 'q1'),
+        ev('TAB_HIDDEN', 3_000, 'q1'),
+        ev('TAB_RETURNED', 20_000, 'q1', { hiddenMs: 17_000 }),
+        ev('ANSWER_SELECTED', 22_000, 'q1', { selectedIndex: 1, msSinceQuestionView: 22_000 }),
+        ev('QUIZ_SUBMITTED', 23_000),
+      ]);
+
+      expect(perQuestion[0].tabSwitches).toBe(1);
+      expect(perQuestion[0].hiddenMs).toBe(17_000);
+      expect(session.totalTabSwitches).toBe(1);
+    });
+
+    it('flags answeredAfterTabSwitch when the first answer follows a tab-away', () => {
+      const { perQuestion, session } = computeBehaviorFeatures([
+        ev('QUESTION_VIEWED', 0, 'q1'),
+        ev('TAB_HIDDEN', 2_000, 'q1'),
+        ev('TAB_RETURNED', 10_000, 'q1', { hiddenMs: 8_000 }),
+        ev('ANSWER_SELECTED', 11_000, 'q1', { selectedIndex: 0, msSinceQuestionView: 11_000 }),
+        ev('QUESTION_VIEWED', 12_000, 'q2'),
+        ev('ANSWER_SELECTED', 16_000, 'q2', { selectedIndex: 2, msSinceQuestionView: 4_000 }),
+        ev('QUIZ_SUBMITTED', 17_000),
+      ]);
+
+      expect(perQuestion.find((q) => q.questionId === 'q1')!.answeredAfterTabSwitch).toBe(true);
+      expect(perQuestion.find((q) => q.questionId === 'q2')!.answeredAfterTabSwitch).toBe(false);
+      expect(session.tabSwitchAnswerRate).toBe(0.5);
+    });
+
+    it('does not flag a tab-away that happens after the question was already answered', () => {
+      const { perQuestion } = computeBehaviorFeatures([
+        ev('QUESTION_VIEWED', 0, 'q1'),
+        ev('ANSWER_SELECTED', 4_000, 'q1', { selectedIndex: 0, msSinceQuestionView: 4_000 }),
+        ev('TAB_HIDDEN', 6_000, 'q1'),
+        ev('TAB_RETURNED', 12_000, 'q1', { hiddenMs: 6_000 }),
+        ev('QUIZ_SUBMITTED', 13_000),
+      ]);
+
+      expect(perQuestion[0].answeredAfterTabSwitch).toBe(false);
+      expect(perQuestion[0].tabSwitches).toBe(1);
+    });
   });
 });

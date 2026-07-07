@@ -18,11 +18,11 @@ import { staggerContainer, staggerItem } from '../../lib/motion';
 
 const statusColor: Record<string, any> = { pending: 'gray', generating: 'yellow', ready: 'green', failed: 'red' };
 
-function GenerateModal({ onClose, defaultTopic = '', defaultDocId = '' }: { onClose: () => void; defaultTopic?: string; defaultDocId?: string }) {
+function GenerateModal({ onClose, defaultTopic = '', defaultDocId = '', defaultDifficulty = 'beginner' }: { onClose: () => void; defaultTopic?: string; defaultDocId?: string; defaultDifficulty?: string }) {
   const qc = useQueryClient();
   const [mode, setMode] = useState<'normal' | 'challenge'>('normal');
   const [topic, setTopic] = useState(defaultTopic);
-  const [difficulty, setDifficulty] = useState('beginner');
+  const [difficulty, setDifficulty] = useState(defaultDifficulty);
   const [count, setCount] = useState(10);
   const [topicInput, setTopicInput] = useState('');
   const [challengeTopics, setChallengeTopics] = useState<string[]>(defaultTopic ? [defaultTopic] : []);
@@ -548,6 +548,10 @@ export function QuizzesPage() {
   const [searchParams] = useSearchParams();
   const defaultTopic = searchParams.get('topic') ?? '';
   const defaultDocId = searchParams.get('docId') ?? '';
+  const difficultyParam = searchParams.get('difficulty') ?? '';
+  const defaultDifficulty = ['beginner', 'intermediate', 'advanced'].includes(difficultyParam)
+    ? difficultyParam
+    : 'beginner';
   const [showModal, setShowModal] = useState(!!(defaultTopic || defaultDocId));
   const [takingId, setTakingId] = useState<string | null>(null);
   const [reviewId, setReviewId] = useState<string | null>(null);
@@ -650,7 +654,7 @@ export function QuizzesPage() {
         </div>
       )}
 
-      {showModal && <GenerateModal onClose={() => setShowModal(false)} defaultTopic={defaultTopic} defaultDocId={defaultDocId} />}
+      {showModal && <GenerateModal onClose={() => setShowModal(false)} defaultTopic={defaultTopic} defaultDocId={defaultDocId} defaultDifficulty={defaultDifficulty} />}
       {takingId && <QuizTaker quizId={takingId} onClose={() => { setTakingId(null); qc.invalidateQueries({ queryKey: ['quizzes'] }); }} />}
       {reviewId && <ReviewModal quizId={reviewId} onClose={() => setReviewId(null)} />}
     </div>

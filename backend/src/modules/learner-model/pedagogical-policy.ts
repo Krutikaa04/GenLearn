@@ -12,6 +12,8 @@ export interface ConceptSnapshot {
   mastery: number;
   confidence: number;
   hasRecentMisconception: boolean;
+  /** Evidence in this session included a correct answer right after a tab-away. */
+  integritySuspect?: boolean;
 }
 
 export interface PolicyDecision {
@@ -71,11 +73,25 @@ export function decideNextActivity(touched: ConceptSnapshot[]): PolicyDecision |
     };
   }
 
-  // 4. Everything strong with stable confidence: level up on the weakest.
+  // 4. Everything strong with stable confidence: level up on the weakest —
+  //    unless any of this session's evidence is integrity-suspect (correct
+  //    answers right after tab-aways). Unverifiable mastery never advances
+  //    difficulty; verify with same-level practice instead.
   const allStrong = byMasteryAsc.every((c) => c.mastery >= STRONG_MASTERY);
   const allStable = byMasteryAsc.every((c) => c.confidence >= STABLE_CONFIDENCE);
+  const suspect = byMasteryAsc.find((c) => c.integritySuspect);
   if (allStrong && allStable) {
     const weakest = byMasteryAsc[0];
+    if (suspect) {
+      return {
+        conceptId: suspect.conceptId,
+        topic: suspect.topic,
+        trigger: DecisionTrigger.PRACTICE,
+        action: DecisionAction.QUIZ,
+        difficulty: 'intermediate',
+        masteryBefore: suspect.mastery,
+      };
+    }
     return {
       conceptId: weakest.conceptId,
       topic: weakest.topic,

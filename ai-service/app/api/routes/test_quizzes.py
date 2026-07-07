@@ -85,3 +85,24 @@ def test_normalize_caps_concept_ids_at_three():
     q = {"conceptIds": ["a", "b", "c", "d", "e"]}
     normalize_concept_metadata(q)
     assert q["conceptIds"] == ["a", "b", "c"]
+
+
+def test_normalize_clamps_expected_seconds_into_range():
+    q = {"expectedSeconds": 500}
+    normalize_concept_metadata(q)
+    assert q["expectedSeconds"] == 300
+
+    q = {"expectedSeconds": 3}
+    normalize_concept_metadata(q)
+    assert q["expectedSeconds"] == 10
+
+    q = {"expectedSeconds": 45.7}
+    normalize_concept_metadata(q)
+    assert q["expectedSeconds"] == 45
+
+
+def test_normalize_nulls_invalid_expected_seconds():
+    for bad in (None, "fast", -5, 0):
+        q = {"expectedSeconds": bad}
+        normalize_concept_metadata(q)
+        assert q["expectedSeconds"] is None

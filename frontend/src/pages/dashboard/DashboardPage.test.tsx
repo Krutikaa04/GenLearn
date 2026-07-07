@@ -189,6 +189,29 @@ describe('DashboardPage', () => {
     );
   });
 
+  it('carries the recommended difficulty into the quiz deep-link', async () => {
+    (adaptiveApi.getRecommendation as any).mockResolvedValue({
+      data: {
+        data: {
+          decisionId: 'd-2',
+          conceptId: 'recursion',
+          topic: 'Recursion',
+          trigger: 'weak_concept',
+          action: 'quiz',
+          difficulty: 'beginner',
+          message: '"recursion" looks shaky — a quick beginner quiz will build it up.',
+        },
+      },
+    });
+
+    render(<DashboardPage />, { wrapper: wrapper() });
+
+    expect(await screen.findByRole('link', { name: 'Take quiz' })).toHaveAttribute(
+      'href',
+      '/quizzes?topic=Recursion&difficulty=beginner',
+    );
+  });
+
   it('does not render the recommendation card when none is pending', async () => {
     render(<DashboardPage />, { wrapper: wrapper() });
 

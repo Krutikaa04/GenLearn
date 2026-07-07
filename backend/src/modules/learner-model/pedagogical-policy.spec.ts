@@ -76,4 +76,18 @@ describe('decideNextActivity', () => {
     const thin = decideNextActivity([concept({ mastery: 90, confidence: 0.3 })]);
     expect(thin).toBeNull();
   });
+
+  it('never advances difficulty on integrity-suspect evidence — verifies with same-level practice instead', () => {
+    const decision = decideNextActivity([
+      concept({ conceptId: 'a', mastery: 85, confidence: 0.8 }),
+      concept({ conceptId: 'b', mastery: 92, confidence: 0.9, integritySuspect: true }),
+    ]);
+
+    expect(decision).toMatchObject({
+      conceptId: 'b',
+      trigger: DecisionTrigger.PRACTICE,
+      action: DecisionAction.QUIZ,
+      difficulty: 'intermediate',
+    });
+  });
 });

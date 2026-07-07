@@ -77,6 +77,73 @@ describe('updateConceptEvidence', () => {
     expect(updateConceptEvidence({ ...fresh, mastery: 98 }, { correct: true, isPrimary: true, behavior: calmBehavior }).mastery).toBe(100);
     expect(updateConceptEvidence({ ...fresh, mastery: 3 }, { correct: false, isPrimary: true, behavior: calmBehavior }).mastery).toBe(0);
   });
+
+  describe('expected-time awareness', () => {
+    it('treats a fast answer as a snap relative to a generous expected time', () => {
+      // 8s is calm against the fixed 2s floor, but a snap for a 90s question
+      const result = updateConceptEvidence(fresh, {
+        correct: true,
+        isPrimary: true,
+        behavior: { answerChanges: 0, timeToFirstAnswerMs: 8_000, idleMs: 0 },
+        expectedTimeMs: 90_000,
+      });
+
+      expect(result.mastery).toBe(54); // half gain
+    });
+
+    it('halves the gain when the answer took far longer than expected (struggle)', () => {
+      const result = updateConceptEvidence(fresh, {
+        correct: true,
+        isPrimary: true,
+        behavior: { answerChanges: 0, timeToFirstAnswerMs: 70_000, idleMs: 0 },
+        expectedTimeMs: 30_000,
+      });
+
+      expect(result.mastery).toBe(54);
+    });
+
+    it('gives the full gain when the answer lands inside the expected window', () => {
+      const result = updateConceptEvidence(fresh, {
+        correct: true,
+        isPrimary: true,
+        behavior: { answerChanges: 0, timeToFirstAnswerMs: 40_000, idleMs: 0 },
+        expectedTimeMs: 60_000,
+      });
+
+      expect(result.mastery).toBe(58);
+    });
+  });
+
+  describe('tab-switch integrity', () => {
+    it('heavily discounts a correct answer that followed a tab-away and flags it', () => {
+      const result = updateConceptEvidence(fresh, {
+        correct: true,
+        isPrimary: true,
+        behavior: { answerChanges: 0, timeToFirstAnswerMs: 8_000, idleMs: 0, answeredAfterTabSwitch: true },
+      });
+
+      expect(result.mastery).toBe(52); // 8 * 0.25 = 2
+      expect(result.integritySuspect).toBe(true);
+    });
+
+    it('does not raise a misconception for a fast wrong answer after a tab-away', () => {
+      const result = updateConceptEvidence(fresh, {
+        correct: false,
+        isPrimary: true,
+        behavior: { answerChanges: 0, timeToFirstAnswerMs: 1_000, idleMs: 0, answeredAfterTabSwitch: true },
+      });
+
+      expect(result.misconception).toBe(false);
+      expect(result.integritySuspect).toBe(false);
+      expect(result.mastery).toBe(44);
+    });
+
+    it('leaves normal answers unflagged', () => {
+      const result = updateConceptEvidence(fresh, { correct: true, isPrimary: true, behavior: calmBehavior });
+
+      expect(result.integritySuspect).toBe(false);
+    });
+  });
 });
 
 describe('confidenceForEvidenceCount', () => {

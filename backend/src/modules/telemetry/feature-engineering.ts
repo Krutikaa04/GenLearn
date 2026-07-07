@@ -23,6 +23,12 @@ export interface QuestionFeatures {
   idleMs: number;
   /** Whether any answer landed under challenge-mode time pressure. */
   underTimerPressure: boolean;
+  /** Times the tab was hidden while this question was on screen. */
+  tabSwitches: number;
+  /** Total time the tab spent hidden on this question. */
+  hiddenMs: number;
+  /** Copy signature: the tab went away and came back before the first answer. */
+  answeredAfterTabSwitch: boolean;
 }
 
 export interface SessionFeatures {
@@ -35,6 +41,9 @@ export interface SessionFeatures {
   totalIdleMs: number;
   abandoned: boolean;
   challengeMode: boolean;
+  totalTabSwitches: number;
+  /** Fraction of answered questions whose first answer followed a tab-away (0-1). */
+  tabSwitchAnswerRate: number;
 }
 
 export interface BehaviorFeatureSet {
@@ -53,7 +62,17 @@ export function computeBehaviorFeatures(events: RawLearningEvent[]): BehaviorFea
   const getQuestion = (questionId: string): QuestionFeatures => {
     let q = questions.get(questionId);
     if (!q) {
-      q = { questionId, dwellMs: 0, timeToFirstAnswerMs: null, answerChanges: 0, idleMs: 0, underTimerPressure: false };
+      q = {
+        questionId,
+        dwellMs: 0,
+        timeToFirstAnswerMs: null,
+        answerChanges: 0,
+        idleMs: 0,
+        underTimerPressure: false,
+        tabSwitches: 0,
+        hiddenMs: 0,
+        answeredAfterTabSwitch: false,
+      };
       questions.set(questionId, q);
     }
     return q;
@@ -97,6 +116,9 @@ export function computeBehaviorFeatures(events: RawLearningEvent[]): BehaviorFea
           if (q.timeToFirstAnswerMs === null) {
             const msSinceView = data.msSinceQuestionView;
             q.timeToFirstAnswerMs = typeof msSinceView === 'number' && Number.isFinite(msSinceView) ? msSinceView : null;
+            // First answer arriving after a tab-away on this question is the
+            // classic look-it-up signature — mark the evidence as unverified.
+            if (q.tabSwitches > 0) q.answeredAfterTabSwitch = true;
           }
         }
         break;
@@ -120,6 +142,18 @@ export function computeBehaviorFeatures(events: RawLearningEvent[]): BehaviorFea
           getQuestion(event.questionId).underTimerPressure = true;
         }
         break;
+
+      case 'TAB_HIDDEN': {
+        const target = typeof event.questionId === 'string' ? event.questionId : currentQuestionId;
+        if (target !== null) getQuestion(target).tabSwitches += 1;
+        break;
+      }
+
+      case 'TAB_RETURNED': {
+        const target = typeof event.questionId === 'string' ? event.questionId : currentQuestionId;
+        if (target !== null) getQuestion(target).hiddenMs += num(data.hiddenMs);
+        break;
+      }
 
       case 'QUIZ_SUBMITTED':
         submitted = true;
@@ -145,6 +179,8 @@ export function computeBehaviorFeatures(events: RawLearningEvent[]): BehaviorFea
   const firstTs = sorted.length ? sorted[0].clientTs.getTime() : 0;
   const lastTs = sorted.length ? sorted[sorted.length - 1].clientTs.getTime() : 0;
 
+  const tabSwitchAnswers = perQuestion.filter((q) => q.answeredAfterTabSwitch).length;
+
   return {
     perQuestion,
     session: {
@@ -157,6 +193,8 @@ export function computeBehaviorFeatures(events: RawLearningEvent[]): BehaviorFea
       totalIdleMs: perQuestion.reduce((s, q) => s + q.idleMs, 0),
       abandoned: abandoned && !submitted,
       challengeMode,
+      totalTabSwitches: perQuestion.reduce((s, q) => s + q.tabSwitches, 0),
+      tabSwitchAnswerRate: answeredIds.size > 0 ? tabSwitchAnswers / answeredIds.size : 0,
     },
   };
 }
