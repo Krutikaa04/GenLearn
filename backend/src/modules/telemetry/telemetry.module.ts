@@ -7,6 +7,7 @@ import { TelemetryService } from './telemetry.service';
 import { TelemetryController } from './telemetry.controller';
 import { TelemetryIngestionWorker, TELEMETRY_INGESTION_QUEUE } from './workers/telemetry-ingestion.processor';
 import { FeatureEngineeringWorker, FEATURE_ENGINEERING_QUEUE } from './workers/feature-engineering.processor';
+import { LearnerModelModule } from '../learner-model/learner-model.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { FeatureEngineeringWorker, FEATURE_ENGINEERING_QUEUE } from './workers/f
     ]),
     BullModule.registerQueue({ name: TELEMETRY_INGESTION_QUEUE }),
     BullModule.registerQueue({ name: FEATURE_ENGINEERING_QUEUE }),
+    LearnerModelModule,
   ],
   controllers: [TelemetryController],
   providers: [TelemetryService, TelemetryIngestionWorker, FeatureEngineeringWorker],
