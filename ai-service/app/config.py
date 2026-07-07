@@ -24,5 +24,8 @@ class Settings(BaseSettings):
     # Redis
     REDIS_URL: str = "redis://redis:6379"
 
+    # Adaptive intelligence rollout flags (default off — existing behavior unchanged)
+    RAG_GENERATION_ENABLED: bool = False
+
 
 settings = Settings()
