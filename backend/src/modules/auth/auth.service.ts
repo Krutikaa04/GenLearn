@@ -16,7 +16,7 @@ import { EmailService } from './email.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
-import { UserStatus } from './schemas/user.schema';
+import { UserRole, UserStatus } from './schemas/user.schema';
 
 @Injectable()
 export class AuthService {
@@ -46,6 +46,8 @@ export class AuthService {
       passwordHash,
       firstName: dto.firstName,
       lastName: dto.lastName,
+      // DTO whitelist limits this to student|teacher — admin is never self-assigned
+      role: (dto.role ?? UserRole.STUDENT) as UserRole,
       emailVerificationToken: verificationTokenHash,
       // Verification requirement is temporarily disabled (see issue #20) — real email
       // delivery only reaches the Resend account owner's own address until a domain

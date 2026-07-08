@@ -16,6 +16,7 @@ import { Card } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
 import { Modal } from '../../components/ui/Modal';
 import { BadgeShowcase } from '../../components/gamification/BadgeShowcase';
+import { JoinedClassroomsCard } from '../../components/classroom/JoinedClassroomsCard';
 import { staggerContainer, staggerItem } from '../../lib/motion';
 
 function DeleteAccountModal({ email, onClose, onConfirm, loading }: { email: string; onClose: () => void; onConfirm: () => void; loading: boolean }) {
@@ -306,6 +307,12 @@ export function ProfilePage() {
       <motion.div variants={staggerItem}>
         <BadgeShowcase />
       </motion.div>
+
+      {user?.role === 'student' && (
+        <motion.div variants={staggerItem}>
+          <JoinedClassroomsCard />
+        </motion.div>
+      )}
 
       <motion.div variants={staggerItem}>
       <Card padding="lg" className="space-y-3">

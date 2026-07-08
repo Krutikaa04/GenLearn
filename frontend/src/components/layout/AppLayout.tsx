@@ -3,7 +3,7 @@ import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, FileText, BookOpen, BrainCircuit,
   Layers, LogOut, GraduationCap, ChevronRight, BotMessageSquare,
-  CalendarDays, Menu, Shield, TrendingUp,
+  CalendarDays, Menu, Shield, TrendingUp, Users,
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
@@ -68,7 +68,7 @@ function NavItem({ to, icon: Icon, label, onNavigate, badge, danger }: any) {
   );
 }
 
-function SidebarContent({ dueCards, initials, user, onNavigate, handleLogout, isAdmin }: any) {
+function SidebarContent({ dueCards, initials, user, onNavigate, handleLogout, isAdmin, isTeacher }: any) {
   return (
     <>
       {/* Logo */}
@@ -113,6 +113,15 @@ function SidebarContent({ dueCards, initials, user, onNavigate, handleLogout, is
         {aiNav.map(({ to, icon, label }) => (
           <NavItem key={to} to={to} icon={icon} label={label} onNavigate={onNavigate} />
         ))}
+
+        {isTeacher && (
+          <>
+            <p className="px-3 pt-4 pb-1.5 text-xs font-semibold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
+              Teaching
+            </p>
+            <NavItem to="/teacher" icon={Users} label="My Classrooms" onNavigate={onNavigate} />
+          </>
+        )}
 
         {isAdmin && (
           <>
@@ -182,7 +191,8 @@ export function AppLayout() {
 
   const initials = user ? `${user.firstName[0]}${user.lastName[0]}`.toUpperCase() : '?';
   const isAdmin = user?.role === 'admin';
-  const sharedProps = { dueCards, initials, user, handleLogout, isAdmin, onNavigate: () => setMobileOpen(false) };
+  const isTeacher = user?.role === 'teacher';
+  const sharedProps = { dueCards, initials, user, handleLogout, isAdmin, isTeacher, onNavigate: () => setMobileOpen(false) };
 
   return (
     <div className="flex min-h-screen" style={{ background: 'var(--bg)' }}>

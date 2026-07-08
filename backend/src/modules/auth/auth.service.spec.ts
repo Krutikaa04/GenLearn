@@ -105,6 +105,25 @@ describe('AuthService', () => {
       expect(repository.createProfile).toHaveBeenCalledTimes(1);
     });
 
+    it('defaults to the student role when none is provided', async () => {
+      repository.createUser.mockResolvedValue(makeUser());
+
+      await service.register({ email: 'new@example.com', password: 'password123', firstName: 'Bob', lastName: 'Jones' } as any);
+
+      expect(repository.createUser).toHaveBeenCalledWith(expect.objectContaining({ role: 'student' }));
+    });
+
+    it('honors an explicit teacher role at registration (and still creates a profile)', async () => {
+      repository.createUser.mockResolvedValue(makeUser({ role: 'teacher' }));
+
+      await service.register({
+        email: 'teach@example.com', password: 'password123', firstName: 'Priya', lastName: 'Shah', role: 'teacher',
+      } as any);
+
+      expect(repository.createUser).toHaveBeenCalledWith(expect.objectContaining({ role: 'teacher' }));
+      expect(repository.createProfile).toHaveBeenCalledTimes(1);
+    });
+
     it('auto-verifies new accounts (verification gate temporarily disabled — see #20)', async () => {
       repository.createUser.mockResolvedValue(makeUser());
 

@@ -1,6 +1,8 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsEmail,
+  IsIn,
+  IsOptional,
   IsString,
   Matches,
   MaxLength,
@@ -32,4 +34,10 @@ export class RegisterDto {
   @MinLength(2)
   @MaxLength(50)
   lastName: string;
+
+  // Self-service roles only — 'admin' is deliberately not accepted here.
+  @ApiPropertyOptional({ enum: ['student', 'teacher'], default: 'student' })
+  @IsOptional()
+  @IsIn(['student', 'teacher'])
+  role?: 'student' | 'teacher';
 }

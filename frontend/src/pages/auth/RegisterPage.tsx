@@ -1,9 +1,10 @@
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod/v4';
 import { Link, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { GraduationCap, Mail, Lock, User } from 'lucide-react';
+import { GraduationCap, Mail, Lock, User, BookOpen, Presentation } from 'lucide-react';
 import { authApi } from '../../api/auth.api';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
@@ -19,6 +20,7 @@ type Form = z.infer<typeof schema>;
 
 export function RegisterPage() {
   const navigate = useNavigate();
+  const [role, setRole] = useState<'student' | 'teacher'>('student');
 
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<Form>({
     resolver: zodResolver(schema),
@@ -26,7 +28,7 @@ export function RegisterPage() {
 
   const onSubmit = async (data: Form) => {
     try {
-      await authApi.register(data);
+      await authApi.register({ ...data, role });
       toast.success('Account created! Please sign in.');
       navigate('/login');
     } catch (err: any) {
@@ -54,6 +56,31 @@ export function RegisterPage() {
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          {/* Role selector */}
+          <div>
+            <p className="text-sm font-medium mb-1.5" style={{ color: 'var(--text-primary)' }}>I am a</p>
+            <div className="grid grid-cols-2 gap-2">
+              {([
+                { value: 'student', label: 'Student', icon: BookOpen },
+                { value: 'teacher', label: 'Teacher', icon: Presentation },
+              ] as const).map(({ value, label, icon: Icon }) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => setRole(value)}
+                  className="flex items-center justify-center gap-2 py-2.5 rounded-xl border text-sm font-medium transition-all"
+                  style={role === value
+                    ? { background: 'var(--brand-light)', borderColor: 'var(--brand)', color: 'var(--brand)' }
+                    : { background: 'var(--bg-subtle)', borderColor: 'var(--border)', color: 'var(--text-secondary)' }
+                  }
+                >
+                  <Icon className="w-4 h-4" />
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+
           <div className="grid grid-cols-2 gap-3">
             <Input
               label="First name"

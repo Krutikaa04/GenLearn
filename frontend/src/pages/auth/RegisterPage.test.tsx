@@ -93,9 +93,24 @@ describe('RegisterPage', () => {
         lastName: 'Smith',
         email: 'alice@test.com',
         password: 'password123',
+        role: 'student',
       });
       expect(toast.success).toHaveBeenCalledWith('Account created! Please sign in.');
       expect(mockNavigate).toHaveBeenCalledWith('/login');
+    });
+  });
+
+  it('registers as a teacher when the Teacher role is selected', async () => {
+    (authApi.register as any).mockResolvedValue({ data: {} });
+    render(<RegisterPage />, { wrapper });
+    fireEvent.click(screen.getByRole('button', { name: /Teacher/ }));
+    fireEvent.input(screen.getByLabelText('First name'), { target: { value: 'Priya' } });
+    fireEvent.input(screen.getByLabelText('Last name'), { target: { value: 'Shah' } });
+    fireEvent.input(screen.getByLabelText('Email address'), { target: { value: 'priya@test.com' } });
+    fireEvent.input(screen.getByLabelText('Password'), { target: { value: 'password123' } });
+    fireEvent.submit(screen.getByRole('button', { name: 'Create free account' }));
+    await waitFor(() => {
+      expect(authApi.register).toHaveBeenCalledWith(expect.objectContaining({ role: 'teacher' }));
     });
   });
 

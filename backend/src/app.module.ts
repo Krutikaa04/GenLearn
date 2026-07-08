@@ -16,6 +16,7 @@ import { TutorModule } from './modules/tutor/tutor.module';
 import { StudyPlanModule } from './modules/studyplan/studyplan.module';
 import { ConversationModule } from './modules/conversation/conversation.module';
 import { TelemetryModule } from './modules/telemetry/telemetry.module';
+import { ClassroomModule } from './modules/classroom/classroom.module';
 import { HealthController } from './health/health.controller';
 
 @Module({
@@ -68,6 +69,7 @@ import { HealthController } from './health/health.controller';
     StudyPlanModule,
     ConversationModule,
     TelemetryModule,
+    ClassroomModule,
   ],
   controllers: [HealthController],
   providers: [
