@@ -93,7 +93,7 @@ export function LoginPage() {
           </blockquote>
         </div>
 
-        <p className="text-white/40 text-xs">© 2025 GenLearn · MCA Final Year Project</p>
+        <p className="text-white/40 text-xs">© 2026 GenLearn</p>
       </div>
 
       {/* Right panel — form */}
