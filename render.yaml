@@ -1,0 +1,103 @@
+# Render Blueprint — https://render.com/docs/blueprint-spec
+#
+# Backend (NestJS) is the primary deploy target. The ai-service (FastAPI) is
+# included so the whole platform can be provisioned from one blueprint; it is
+# optional and can be deployed separately.
+#
+# Secrets are marked `sync: false` — Render will prompt for them on first deploy
+# and they are never committed to the repo. Non-secret config is inlined.
+
+services:
+  # ---------------------------------------------------------------------------
+  # Backend API (NestJS)
+  # ---------------------------------------------------------------------------
+  - type: web
+    name: genlearn-backend
+    runtime: node
+    rootDir: backend
+    plan: free
+    autoDeploy: true
+    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm build
+    startCommand: node dist/main
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        value: "22"
+      # PORT is injected by Render automatically — do NOT set it here.
+      - key: DATABASE_URL          # MongoDB Atlas SRV connection string
+        sync: false
+      - key: REDIS_URL             # Managed Redis URL (rediss:// if TLS)
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: JWT_ACCESS_EXPIRES_IN
+        value: 15m
+      - key: JWT_REFRESH_EXPIRES_IN
+        value: 7d
+      - key: AI_SERVICE_URL        # Internal URL of the ai-service
+        sync: false
+      - key: INTERNAL_API_KEY      # Must match ai-service INTERNAL_API_KEY
+        sync: false
+      - key: SMTP_HOST
+        value: smtp.resend.com
+      - key: SMTP_PORT
+        value: "587"
+      - key: SMTP_USER
+        value: resend
+      - key: SMTP_PASSWORD         # Resend API key
+        sync: false
+      - key: SMTP_FROM
+        value: onboarding@resend.dev
+      - key: FRONTEND_URL          # Vercel production URL
+        sync: false
+      - key: CORS_ORIGINS          # Optional extra origins (comma-separated)
+        sync: false
+      - key: ALLOW_VERCEL_PREVIEWS
+        value: "false"
+      # Adaptive intelligence rollout flags (default off)
+      - key: BEHAVIOR_TELEMETRY_ENABLED
+        value: "false"
+      - key: ADAPTIVE_LEARNING_ENABLED
+        value: "false"
+      - key: RAG_GENERATION_ENABLED
+        value: "false"
+      - key: ADAPTIVE_QUIZ_GENERATION_ENABLED
+        value: "false"
+      - key: ADAPTIVE_LESSON_GENERATION_ENABLED
+        value: "false"
+
+  # ---------------------------------------------------------------------------
+  # AI service (FastAPI) — optional, deploy when needed
+  # ---------------------------------------------------------------------------
+  - type: web
+    name: genlearn-ai-service
+    runtime: python
+    rootDir: ai-service
+    plan: free
+    autoDeploy: true
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT --workers 2
+    healthCheckPath: /health
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: PYTHON_VERSION
+        value: "3.11"
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: MODEL_NAME
+        value: gemini-2.5-flash
+      - key: EMBEDDING_MODEL
+        value: models/text-embedding-004
+      - key: INTERNAL_API_KEY      # Must match backend INTERNAL_API_KEY
+        sync: false
+      - key: MONGODB_URI           # MongoDB Atlas (same cluster as backend)
+        sync: false
+      - key: BACKEND_URL           # Render backend URL (for CORS)
+        sync: false
+      - key: REDIS_URL
+        sync: false
+      - key: RAG_GENERATION_ENABLED
+        value: "false"

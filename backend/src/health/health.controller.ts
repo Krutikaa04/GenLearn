@@ -21,8 +21,9 @@ export class HealthController {
     ]);
     return {
       ...result,
-      version: '1.0.0',
       service: 'genlearn-backend',
+      version: '1.0.0',
+      timestamp: new Date().toISOString(),
     };
   }
 }

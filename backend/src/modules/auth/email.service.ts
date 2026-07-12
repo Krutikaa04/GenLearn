@@ -13,7 +13,7 @@ export class EmailService {
     private readonly configService: ConfigService,
     private readonly httpService: HttpService,
   ) {
-    // Resend's HTTP API is used instead of SMTP: many PaaS hosts (Railway included)
+    // Resend's HTTP API is used instead of SMTP: many PaaS hosts (Render included)
     // block outbound SMTP ports entirely, but regular HTTPS always works.
     this.apiKey = this.configService.get<string>('SMTP_PASSWORD');
   }

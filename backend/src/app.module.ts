@@ -26,7 +26,7 @@ import { HealthController } from './health/health.controller';
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => ({
         uri: configService.getOrThrow<string>('DATABASE_URL'),
-        // A transient blip (Railway cold start, Atlas maintenance) shouldn't need
+        // A transient blip (PaaS cold start, Atlas maintenance) shouldn't need
         // a full process restart to recover from — give the driver a real window
         // to retry server selection before giving up, and retry writes/reads that
         // land during a replica set election.

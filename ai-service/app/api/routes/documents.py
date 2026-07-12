@@ -15,7 +15,7 @@ class ProcessDocumentRequest(BaseModel):
     documentId: str
     studentId: str
     fileContent: str  # base64-encoded file bytes — backend and ai-service run as
-    # separate Railway services with no shared filesystem, so the file can't be
+    # separate deployed services with no shared filesystem, so the file can't be
     # read by local path; it's sent over the wire instead.
     fileType: str
 

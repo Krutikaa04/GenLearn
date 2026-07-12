@@ -33,7 +33,7 @@ export class DocumentProcessorWorker extends WorkerHost {
     try {
       await this.documentRepository.updateStatus(documentId, DocumentStatus.PROCESSING);
 
-      // Backend and ai-service run as separate Railway services with no shared
+      // Backend and ai-service run as separate deployed services with no shared
       // filesystem, so the file is read here and sent over the wire rather than
       // relying on ai-service reading storagePath from its own local disk.
       const fileBuffer = await fs.readFile(storagePath);
