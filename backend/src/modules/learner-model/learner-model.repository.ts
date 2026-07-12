@@ -71,4 +71,11 @@ export class LearnerModelRepository {
       .updateOne({ decisionId }, { $set: { status: DecisionStatus.COMPLETED, masteryAfter } })
       .exec();
   }
+
+  /** Link a generated adaptive quiz back to the decision that produced it. */
+  async markGenerated(decisionId: string, generatedActivityId: string): Promise<void> {
+    await this.decisionModel
+      .updateOne({ decisionId }, { $set: { generatedActivityId } })
+      .exec();
+  }
 }

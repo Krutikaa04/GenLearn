@@ -49,6 +49,12 @@ export interface GenerateQuizPayload {
   challengeMode?: boolean;
   challengeTopics?: string[];
   timeLimitMinutes?: number;
+  adaptiveFocus?: {
+    purpose: string;
+    targetConcepts: string[];
+    misconceptionsToProbe: string[];
+    conceptsToReduce: string[];
+  };
 }
 
 export interface QuizQuestion {

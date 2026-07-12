@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { BrainCircuit, Plus, Trash2, Loader2, CheckCircle, XCircle, X, Trophy, Zap, AlertTriangle, ClipboardList, FileText } from 'lucide-react';
+import { BrainCircuit, Plus, Trash2, Loader2, CheckCircle, XCircle, X, Trophy, Zap, AlertTriangle, ClipboardList, FileText, Sparkles, TrendingUp, TrendingDown, Target } from 'lucide-react';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { quizzesApi } from '../../api/quizzes.api';
+import { adaptiveApi } from '../../api/adaptive.api';
 import { analyticsApi } from '../../api/analytics.api';
 import { documentsApi } from '../../api/documents.api';
 import { Button } from '../../components/ui/Button';
@@ -303,7 +304,128 @@ function ReviewModal({ quizId, onClose }: { quizId: string; onClose: () => void 
   );
 }
 
-function QuizTaker({ quizId, onClose }: { quizId: string; onClose: () => void }) {
+function ConceptRow({ label, mastery, uncertain, tone }: { label: string; mastery: number; uncertain: boolean; tone: 'strong' | 'developing' | 'weak' }) {
+  const color = tone === 'strong' ? 'var(--success)' : tone === 'developing' ? 'var(--warning)' : 'var(--danger)';
+  const icon = tone === 'strong' ? '✓' : tone === 'developing' ? '△' : '!';
+  return (
+    <div className="flex items-center gap-2 text-sm">
+      <span className="font-bold w-4 text-center" style={{ color }}>{icon}</span>
+      <span className="flex-1 capitalize" style={{ color: 'var(--text-primary)' }}>{label}</span>
+      <span className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>
+        {uncertain ? 'early estimate' : `${mastery}% mastery`}
+      </span>
+    </div>
+  );
+}
+
+/**
+ * The visible "Quiz Intelligence Report" — behavior-driven analysis rendered
+ * from the backend learner model. Polls briefly while the async pipeline
+ * computes, and degrades gracefully to nothing if analysis is unavailable so
+ * the plain score result is never blocked.
+ */
+function QuizIntelligenceReport({ quizId, onStartNext, startingNext }: { quizId: string; onStartNext: () => void; startingNext: boolean }) {
+  const { data, isError } = useQuery({
+    queryKey: ['quiz-analysis', quizId],
+    queryFn: () => adaptiveApi.getAnalysis(quizId).then((r) => r.data.data),
+    refetchInterval: (q) => (q.state.data?.status === 'processing' ? 2500 : false),
+    retry: 1,
+  });
+
+  if (isError) return null;
+  if (!data || data.status === 'processing') {
+    return (
+      <div className="flex items-center gap-2 rounded-xl p-3 text-sm" style={{ background: 'var(--brand-light)', color: 'var(--brand)' }}>
+        <Loader2 className="w-4 h-4 animate-spin" /> Analyzing how you learned…
+      </div>
+    );
+  }
+
+  const p = data.performance;
+  const cm = data.conceptMastery ?? { strong: [], developing: [], needsAttention: [] };
+  const next = data.nextPlan;
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-2">
+        <Sparkles className="w-4 h-4" style={{ color: 'var(--brand)' }} />
+        <h4 className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>Quiz Intelligence Report</h4>
+      </div>
+
+      {/* Performance + improvement */}
+      {p && (
+        <div className="rounded-xl border p-3" style={{ borderColor: 'var(--border)', background: 'var(--bg-subtle)' }}>
+          <div className="flex items-center justify-between">
+            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{p.correct}/{p.totalQuestions} correct · {p.difficulty}</p>
+            {p.improvement != null && (
+              <span className="flex items-center gap-1 text-xs font-semibold" style={{ color: p.improvement >= 0 ? 'var(--success)' : 'var(--danger)' }}>
+                {p.improvement >= 0 ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
+                {p.improvement >= 0 ? '+' : ''}{p.improvement}% vs last {p.difficulty === undefined ? '' : 'quiz'}
+              </span>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Concept mastery */}
+      {(cm.strong.length + cm.developing.length + cm.needsAttention.length > 0) && (
+        <div className="space-y-2.5">
+          {cm.strong.length > 0 && <div className="space-y-1.5">
+            <p className="text-xs font-bold uppercase tracking-wide" style={{ color: 'var(--success)' }}>Strong</p>
+            {cm.strong.map((c: any) => <ConceptRow key={c.conceptId} label={c.label} mastery={c.mastery} uncertain={c.uncertain} tone="strong" />)}
+          </div>}
+          {cm.developing.length > 0 && <div className="space-y-1.5">
+            <p className="text-xs font-bold uppercase tracking-wide" style={{ color: 'var(--warning)' }}>Developing</p>
+            {cm.developing.map((c: any) => <ConceptRow key={c.conceptId} label={c.label} mastery={c.mastery} uncertain={c.uncertain} tone="developing" />)}
+          </div>}
+          {cm.needsAttention.length > 0 && <div className="space-y-1.5">
+            <p className="text-xs font-bold uppercase tracking-wide" style={{ color: 'var(--danger)' }}>Needs attention</p>
+            {cm.needsAttention.map((c: any) => <ConceptRow key={c.conceptId} label={c.label} mastery={c.mastery} uncertain={c.uncertain} tone="weak" />)}
+          </div>}
+        </div>
+      )}
+
+      {/* Behavioral observations */}
+      {data.behavioralObservations?.length > 0 && (
+        <div className="space-y-1.5">
+          <p className="text-xs font-bold uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>What we noticed</p>
+          {data.behavioralObservations.map((o: string, i: number) => (
+            <p key={i} className="text-sm flex gap-2" style={{ color: 'var(--text-secondary)' }}><span style={{ color: 'var(--brand)' }}>•</span>{o}</p>
+          ))}
+        </div>
+      )}
+
+      {/* Possible misconceptions */}
+      {data.possibleMisconceptions?.length > 0 && (
+        <div className="rounded-xl p-3 space-y-1.5" style={{ background: 'var(--warning-light)', border: '1px solid var(--warning)' }}>
+          <p className="text-xs font-bold" style={{ color: 'var(--warning)' }}>Possible misconception</p>
+          {data.possibleMisconceptions.map((m: string, i: number) => (
+            <p key={i} className="text-sm" style={{ color: 'var(--text-secondary)' }}>{m}</p>
+          ))}
+        </div>
+      )}
+
+      {/* What GenLearn will do next */}
+      {next?.available && next.bullets?.length > 0 && (
+        <div className="rounded-xl p-3.5 space-y-2" style={{ background: 'var(--brand-light)', border: '1px solid var(--brand)' }}>
+          <div className="flex items-center gap-1.5">
+            <Target className="w-4 h-4" style={{ color: 'var(--brand)' }} />
+            <p className="text-xs font-bold" style={{ color: 'var(--brand)' }}>Your next quiz will</p>
+          </div>
+          {next.bullets.map((b: string, i: number) => (
+            <p key={i} className="text-sm flex gap-2" style={{ color: 'var(--text-secondary)' }}><span style={{ color: 'var(--brand)' }}>→</span>{b}</p>
+          ))}
+        </div>
+      )}
+
+      <Button onClick={onStartNext} loading={startingNext} className="w-full">
+        <Sparkles className="w-4 h-4" /> Start Your Next Adaptive Quiz
+      </Button>
+    </div>
+  );
+}
+
+function QuizTaker({ quizId, onClose, onStartNext }: { quizId: string; onClose: () => void; onStartNext: () => Promise<void> }) {
   const qc = useQueryClient();
   const { data, isLoading } = useQuery({
     queryKey: ['quiz', quizId],
@@ -315,6 +437,16 @@ function QuizTaker({ quizId, onClose }: { quizId: string; onClose: () => void })
   const [submitting, setSubmitting] = useState(false);
   const [current, setCurrent] = useState(0);
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
+  const [startingNext, setStartingNext] = useState(false);
+
+  const handleStartNext = async () => {
+    setStartingNext(true);
+    try {
+      await onStartNext();
+    } finally {
+      setStartingNext(false);
+    }
+  };
 
   const quiz = data;
   const isChallenge = quiz?.challengeMode;
@@ -475,8 +607,12 @@ function QuizTaker({ quizId, onClose }: { quizId: string; onClose: () => void })
               ))}
             </div>
 
-            <WeakTopicsPanel topic={quiz?.topic ?? ''} />
-            <Button onClick={onClose} className="w-full">Done</Button>
+            {result.adaptation ? (
+              <QuizIntelligenceReport quizId={quizId} onStartNext={handleStartNext} startingNext={startingNext} />
+            ) : (
+              <WeakTopicsPanel topic={quiz?.topic ?? ''} />
+            )}
+            <Button variant="outline" onClick={onClose} className="w-full">Done</Button>
           </div>
         ) : (
           <div className="p-6 space-y-5">
@@ -572,6 +708,35 @@ export function QuizzesPage() {
     onSuccess: () => { toast.success('Deleted'); qc.invalidateQueries({ queryKey: ['quizzes'] }); },
   });
 
+  // Generates the next behavior-driven quiz, waits for it to be ready, then
+  // swaps the open QuizTaker to it — keeping the adaptive loop continuous.
+  const startAdaptiveNext = async () => {
+    try {
+      const res = await quizzesApi.generateAdaptive();
+      const newId = res.data.data.quizId;
+      for (let i = 0; i < 45; i++) {
+        const st = await quizzesApi.getStatus(newId);
+        const status = st.data.data.status;
+        if (status === 'ready') {
+          qc.invalidateQueries({ queryKey: ['quizzes'] });
+          setTakingId(newId);
+          toast.success('Your next adaptive quiz is ready');
+          return;
+        }
+        if (status === 'failed') throw new Error('generation failed');
+        await new Promise((r) => setTimeout(r, 2000));
+      }
+      throw new Error('timeout');
+    } catch (err: any) {
+      const code = err?.response?.data?.error?.code;
+      if (code === 'NO_ADAPTIVE_PLAN') {
+        toast('Take another quiz first — GenLearn needs a little more evidence to adapt.', { icon: '🧠' });
+      } else {
+        toast.error('Could not build the next adaptive quiz. You can generate one manually.');
+      }
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-start justify-between">
@@ -607,6 +772,7 @@ export function QuizzesPage() {
                 <div className="flex items-center gap-2 mt-1.5 flex-wrap">
                   <Badge label={quiz.difficulty} color="purple" />
                   <Badge label={quiz.status} color={statusColor[quiz.status]} />
+                  {quiz.adaptive && <Badge label="Adaptive" color="green" />}
                   {quiz.challengeMode && <Badge label="Challenge" color="yellow" />}
                   {quiz.timeLimitMinutes && <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{quiz.timeLimitMinutes}min limit</span>}
                   {quiz.questionCount && <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{quiz.questionCount}q</span>}
@@ -655,7 +821,7 @@ export function QuizzesPage() {
       )}
 
       {showModal && <GenerateModal onClose={() => setShowModal(false)} defaultTopic={defaultTopic} defaultDocId={defaultDocId} defaultDifficulty={defaultDifficulty} />}
-      {takingId && <QuizTaker quizId={takingId} onClose={() => { setTakingId(null); qc.invalidateQueries({ queryKey: ['quizzes'] }); }} />}
+      {takingId && <QuizTaker key={takingId} quizId={takingId} onClose={() => { setTakingId(null); qc.invalidateQueries({ queryKey: ['quizzes'] }); }} onStartNext={startAdaptiveNext} />}
       {reviewId && <ReviewModal quizId={reviewId} onClose={() => setReviewId(null)} />}
     </div>
   );

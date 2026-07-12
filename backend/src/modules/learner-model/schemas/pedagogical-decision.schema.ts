@@ -63,6 +63,18 @@ export class PedagogicalDecision {
   /** Set once an adaptive activity has been generated for this decision. */
   @Prop({ type: String, default: null })
   generatedActivityId: string | null;
+
+  /**
+   * The structured quiz blueprint derived from this decision — the contract
+   * handed to LLM generation (target concept distribution, difficulty,
+   * misconceptions to probe). Persisted for explainability/reproducibility.
+   */
+  @Prop({ type: Object, default: null })
+  blueprint: Record<string, unknown> | null;
+
+  /** Machine-readable reasons behind the decision (surfaced in the UI copy). */
+  @Prop({ type: [String], default: [] })
+  reasonCodes: string[];
 }
 
 export type PedagogicalDecisionDocument = PedagogicalDecision & Document;

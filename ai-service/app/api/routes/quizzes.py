@@ -23,6 +23,8 @@ class GenerateQuizRequest(BaseModel):
     challengeMode: bool = False
     challengeTopics: list[str] = []
     timeLimitMinutes: Optional[int] = None
+    # Behavior-driven adaptive generation: concepts/misconceptions to target
+    adaptiveFocus: Optional[dict] = None
 
 
 class GenerateQuizResponse(BaseModel):
@@ -207,6 +209,32 @@ async def generate_quiz(request: GenerateQuizRequest):
             context = await get_grounding_context(request.topic, request.studentId, request.documentIds, get_db())
             if context:
                 context_block = f"Ground the questions in this source material where relevant:\n{context}"
+
+        # Adaptive focus biases the quiz toward the concepts the learner model
+        # flagged, without discarding topic coherence.
+        focus = request.adaptiveFocus or {}
+        focus_lines: list[str] = []
+        if focus.get("targetConcepts"):
+            focus_lines.append(
+                "Concentrate the questions on these specific concepts (most important first): "
+                + ", ".join(focus["targetConcepts"])
+            )
+        if focus.get("misconceptionsToProbe"):
+            focus_lines.append(
+                "Include questions whose distractors probe these likely misconceptions: "
+                + ", ".join(focus["misconceptionsToProbe"])
+            )
+        if focus.get("conceptsToReduce"):
+            focus_lines.append(
+                "Minimise questions on these already-mastered concepts: "
+                + ", ".join(focus["conceptsToReduce"])
+            )
+        if focus_lines:
+            adaptive_block = (
+                "This is an adaptive follow-up quiz personalised to the learner. "
+                + " ".join(focus_lines)
+            )
+            context_block = f"{adaptive_block}\n\n{context_block}".strip()
 
         prompt = QUIZ_PROMPT.format(
             topic=request.topic,

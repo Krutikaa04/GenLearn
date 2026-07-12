@@ -60,7 +60,8 @@ describe('QuizService', () => {
     analytics = { recordQuizResult: jest.fn().mockResolvedValue(undefined) };
     queue = { add: jest.fn().mockResolvedValue({ id: 'job-1' }) };
     config = { get: jest.fn().mockReturnValue('false') };
-    service = new QuizService(repository as any, analytics as any, queue as any, config as any);
+    const learnerModel = { getNextQuizPlan: jest.fn(), markDecisionGenerated: jest.fn() };
+    service = new QuizService(repository as any, analytics as any, queue as any, config as any, learnerModel as any);
   });
 
   // ─── generate ────────────────────────────────────────────────────────────────

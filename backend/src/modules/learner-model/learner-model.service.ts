@@ -3,14 +3,16 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { v4 as uuidv4 } from 'uuid';
 import { LearnerModelRepository } from './learner-model.repository';
-import { Quiz, QuizDocument } from '../quiz/schemas/quiz.schema';
+import { Quiz, QuizDocument, QuizStatus } from '../quiz/schemas/quiz.schema';
 import {
   QuestionBehaviorSignal,
   topicToConceptId,
   updateConceptEvidence,
 } from './mastery-update';
 import { ConceptSnapshot, decideNextActivity } from './pedagogical-policy';
+import { buildQuizBlueprint, QuizBlueprint } from './quiz-blueprint';
 import { DecisionStatus, DecisionTrigger } from './schemas/pedagogical-decision.schema';
+import { BehaviorFeatures, BehaviorFeaturesDocument } from '../telemetry/schemas/behavior-features.schema';
 
 export interface SessionBehaviorInput {
   perQuestion: {
@@ -29,6 +31,8 @@ export class LearnerModelService {
   constructor(
     private readonly repository: LearnerModelRepository,
     @InjectModel(Quiz.name) private readonly quizModel: Model<QuizDocument>,
+    @InjectModel(BehaviorFeatures.name)
+    private readonly behaviorModel: Model<BehaviorFeaturesDocument>,
   ) {}
 
   async getConceptMastery(studentId: string) {
@@ -56,6 +60,186 @@ export class LearnerModelService {
       action: decision.action,
       difficulty: decision.difficulty,
       message: messages[decision.trigger],
+    };
+  }
+
+  /** The pending adaptive plan (decision + persisted blueprint), or null. */
+  async getNextQuizPlan(studentId: string): Promise<{
+    decisionId: string;
+    topic: string;
+    conceptId: string;
+    difficulty: string;
+    blueprint: QuizBlueprint | null;
+    sourceQuizId: string | null;
+  } | null> {
+    const decision = await this.repository.findPendingDecision(studentId);
+    if (!decision) return null;
+    return {
+      decisionId: decision.decisionId,
+      topic: decision.topic,
+      conceptId: decision.conceptId,
+      difficulty: decision.difficulty,
+      blueprint: (decision.blueprint as unknown as QuizBlueprint) ?? null,
+      sourceQuizId: decision.sourceQuizId,
+    };
+  }
+
+  async markDecisionGenerated(decisionId: string, quizId: string): Promise<void> {
+    await this.repository.markGenerated(decisionId, quizId);
+  }
+
+  /**
+   * Assembles the student-facing "Quiz Intelligence Report" for one submitted
+   * quiz: performance, concept mastery bands, behavioral observations, possible
+   * misconceptions, and what the next adaptive quiz will do. Every section is
+   * evidence-gated — absent (not faked) when the data isn't there yet. Returns
+   * `{ status: 'processing' }` while the async learner-model pipeline catches up.
+   */
+  async getQuizAnalysis(studentId: string, quizId: string) {
+    const quiz = await this.quizModel.findOne({ quizId, studentId }).exec();
+    if (!quiz || !quiz.answers?.length) return { status: 'processing' as const };
+
+    const humanize = (id: string) => id.replace(/-/g, ' ');
+
+    // Concepts this quiz actually touched (metadata, else topic bridge).
+    const touchedConceptIds = new Set<string>();
+    for (const q of quiz.questions) {
+      const primary = q.primaryConceptId ?? topicToConceptId(q.topic ?? quiz.topic);
+      touchedConceptIds.add(primary);
+      for (const c of q.conceptIds ?? []) touchedConceptIds.add(c);
+    }
+
+    const allMastery = await this.repository.findByStudent(studentId);
+    const relevant = allMastery.filter((m) => touchedConceptIds.has(m.conceptId));
+    const masteryPool = relevant.length ? relevant : allMastery;
+
+    const band = (min: number, max: number) =>
+      masteryPool
+        .filter((m) => m.mastery >= min && m.mastery < max)
+        .sort((a, b) => a.mastery - b.mastery)
+        .map((m) => ({
+          conceptId: m.conceptId,
+          label: humanize(m.conceptId),
+          mastery: Math.round(m.mastery),
+          confidence: Math.round(m.confidence * 100) / 100,
+          // Guard against false precision on thin evidence.
+          uncertain: m.evidenceCount < 3 || m.confidence < 0.4,
+        }));
+
+    const conceptMastery = {
+      strong: band(80, 101),
+      developing: band(50, 80),
+      needsAttention: band(0, 50),
+    };
+
+    // Behavior features for this quiz's session (may be absent when telemetry off).
+    const behavior = await this.behaviorModel.findOne({ quizId }).exec();
+    const behavioralObservations = this.deriveObservations(behavior, quiz.answers.length);
+
+    // Possible misconceptions: only surfaced when a concept was actually flagged
+    // this quiz (confidently-wrong evidence) — never inferred from a single miss.
+    const possibleMisconceptions = allMastery
+      .filter((m) => (m.misconceptionFlags ?? []).some((f) => f.quizId === quizId))
+      .map((m) => `You may be applying "${humanize(m.conceptId)}" incorrectly — the confident-but-wrong pattern suggests a misunderstanding rather than a slip.`);
+
+    // Performance summary + improvement vs the previous quiz on this topic.
+    const correct = quiz.answers.filter((a) => a.isCorrect).length;
+    const total = quiz.answers.length;
+    const scorePercent = Math.round((correct / total) * 100);
+    const previous = await this.quizModel
+      .findOne({ studentId, topic: quiz.topic, status: QuizStatus.SUBMITTED, quizId: { $ne: quizId }, score: { $ne: null } })
+      .sort({ submittedAt: -1 })
+      .exec();
+    const prevPercent =
+      previous && previous.score != null && previous.questionCount
+        ? Math.round((previous.score / previous.questionCount) * 100)
+        : null;
+
+    const performance = {
+      score: correct,
+      correct,
+      incorrect: total - correct,
+      totalQuestions: total,
+      scorePercent,
+      difficulty: quiz.difficulty,
+      completionTimeMs: behavior?.session?.totalDurationMs ?? null,
+      previousScorePercent: prevPercent,
+      improvement: prevPercent == null ? null : scorePercent - prevPercent,
+    };
+
+    const strengths = conceptMastery.strong.map((c) => `Consistently correct on ${c.label} (${c.mastery}% estimated mastery)`);
+    const weaknesses = conceptMastery.needsAttention.map((c) => `Repeated errors on ${c.label} (${c.mastery}% estimated mastery)`);
+
+    // What GenLearn will do next — read from the persisted blueprint/decision.
+    const nextPlan = await this.buildNextPlanSummary(studentId, humanize);
+
+    return {
+      status: 'ready' as const,
+      performance,
+      conceptMastery,
+      strengths,
+      weaknesses,
+      behavioralObservations,
+      possibleMisconceptions,
+      nextPlan,
+    };
+  }
+
+  /** Turn engineered behavior features into student-friendly observations. */
+  private deriveObservations(
+    behavior: BehaviorFeaturesDocument | null,
+    questionCount: number,
+  ): string[] {
+    if (!behavior?.session) return [];
+    const s = behavior.session;
+    const out: string[] = [];
+
+    if (s.totalAnswerChanges >= 3) {
+      out.push(`You changed your answer on several questions, which suggests some uncertainty while deciding.`);
+    }
+    const fastAndConfident = (behavior.perQuestion ?? []).filter(
+      (q) => q.answerChanges === 0 && q.timeToFirstAnswerMs != null && q.timeToFirstAnswerMs < 8000,
+    ).length;
+    if (fastAndConfident >= Math.ceil(questionCount / 2)) {
+      out.push(`You answered most questions quickly and without second-guessing — a sign of fluent recall.`);
+    }
+    if (s.avgDwellMs > 45000) {
+      out.push(`You spent longer than a typical pace on each question, taking time to reason it through.`);
+    }
+    if (s.totalTabSwitches > 0) {
+      out.push(`You left the quiz tab ${s.totalTabSwitches} time${s.totalTabSwitches > 1 ? 's' : ''} — answers given right after are weighted more cautiously by the model.`);
+    }
+    if (s.abandoned) {
+      out.push(`The quiz was left before completion, so this evidence is treated as partial.`);
+    }
+    return out;
+  }
+
+  /** Human-readable "next quiz will…" bullets from the pending blueprint. */
+  private async buildNextPlanSummary(studentId: string, humanize: (id: string) => string) {
+    const plan = await this.getNextQuizPlan(studentId);
+    if (!plan || !plan.blueprint) return { available: false as const, bullets: [] as string[] };
+
+    const bp = plan.blueprint;
+    const bullets: string[] = [];
+    const focus = Object.entries(bp.targetConceptDistribution ?? {})
+      .sort((a, b) => b[1] - a[1])
+      .map(([c]) => humanize(c));
+    if (focus.length) bullets.push(`focus more on ${focus.slice(0, 3).join(', ')}`);
+    if (bp.misconceptionsToProbe?.length) {
+      bullets.push(`directly probe the ${bp.misconceptionsToProbe.map(humanize).join(', ')} misconception`);
+    }
+    if (bp.conceptsToReduce?.length) {
+      bullets.push(`reduce questions on ${bp.conceptsToReduce.map(humanize).slice(0, 3).join(', ')}, which you've already shown strongly`);
+    }
+    bullets.push(`stay near ${bp.difficulty} difficulty until the weak areas are resolved`);
+
+    return {
+      available: true as const,
+      purpose: bp.purpose,
+      difficulty: bp.difficulty,
+      focusConcepts: focus.slice(0, 3),
+      bullets,
     };
   }
 
@@ -189,6 +373,11 @@ export class LearnerModelService {
       await this.repository.dismissDecision(pending.decisionId);
     }
 
+    // Derive the structured blueprint now so it's persisted alongside the
+    // decision — the next adaptive quiz is generated from this, and the UI
+    // explains "what GenLearn will do next" from its reason codes.
+    const blueprint = buildQuizBlueprint(decision, touched);
+
     await this.repository.createDecision({
       decisionId: uuidv4(),
       studentId,
@@ -202,6 +391,8 @@ export class LearnerModelService {
       masteryAfter: null,
       sourceQuizId,
       generatedActivityId: null,
+      blueprint: blueprint as unknown as Record<string, unknown>,
+      reasonCodes: blueprint.reasonCodes,
     });
 
     this.logger.log(

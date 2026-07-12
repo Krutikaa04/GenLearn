@@ -45,7 +45,8 @@ describe('LearnerModelService', () => {
       completeDecision: jest.fn().mockResolvedValue(undefined),
     };
     quizModel = { findOne: jest.fn().mockReturnValue({ exec: jest.fn().mockResolvedValue(makeQuiz()) }) };
-    service = new LearnerModelService(repository as any, quizModel as any);
+    const behaviorModel = { findOne: jest.fn().mockReturnValue({ exec: jest.fn().mockResolvedValue(null) }) };
+    service = new LearnerModelService(repository as any, quizModel as any, behaviorModel as any);
   });
 
   it('updates the primary concept with a full step and secondaries with half steps', async () => {

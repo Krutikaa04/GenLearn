@@ -31,6 +31,14 @@ export class QuizController {
     return { data: result };
   }
 
+  @Post('adaptive/next')
+  @HttpCode(HttpStatus.ACCEPTED)
+  @ApiOperation({ summary: 'Generate the next behavior-driven adaptive quiz from the pending plan' })
+  async generateAdaptive(@CurrentUser() user: JwtPayload) {
+    const result = await this.quizService.generateAdaptive(user.userId);
+    return { data: result };
+  }
+
   @Get()
   @ApiOperation({ summary: 'List all quizzes for the current student' })
   @ApiQuery({ name: 'page', required: false, type: Number })

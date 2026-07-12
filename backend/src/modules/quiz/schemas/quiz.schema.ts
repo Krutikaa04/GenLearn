@@ -114,6 +114,10 @@ export class Quiz {
   @Prop({ default: false })
   challengeMode: boolean;
 
+  /** True when this quiz was auto-planned by the adaptive loop (not manual). */
+  @Prop({ default: false })
+  adaptive: boolean;
+
   @Prop({ type: Number, default: null })
   timeLimitMinutes: number | null;
 

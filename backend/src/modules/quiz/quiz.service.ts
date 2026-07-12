@@ -11,11 +11,12 @@ import { ConfigService } from '@nestjs/config';
 import { Queue } from 'bullmq';
 import { v4 as uuidv4 } from 'uuid';
 import { QuizRepository } from './quiz.repository';
-import { QuizStatus } from './schemas/quiz.schema';
+import { QuizStatus, DifficultyLevel } from './schemas/quiz.schema';
 import { GenerateQuizDto } from './dto/generate-quiz.dto';
 import { SubmitQuizDto } from './dto/submit-quiz.dto';
 import { QUIZ_GENERATION_QUEUE, QuizGenerationJob } from './workers/quiz-generator.processor';
 import { AnalyticsService } from '../analytics/analytics.service';
+import { LearnerModelService } from '../learner-model/learner-model.service';
 import { isFeatureEnabled } from '../../common/feature-flags';
 
 @Injectable()
@@ -27,7 +28,87 @@ export class QuizService {
     private readonly analyticsService: AnalyticsService,
     @InjectQueue(QUIZ_GENERATION_QUEUE) private readonly generationQueue: Queue,
     private readonly configService: ConfigService,
+    private readonly learnerModel: LearnerModelService,
   ) {}
+
+  /**
+   * Behavior-driven quiz generation: reads the student's pending adaptive plan
+   * (decision + blueprint) and queues a quiz targeting the concepts/difficulty
+   * it prescribes, grounded in the source quiz's documents (RAG). This is the
+   * primary post-quiz path — manual generation stays available as a fallback.
+   */
+  async generateAdaptive(studentId: string) {
+    const plan = await this.learnerModel.getNextQuizPlan(studentId);
+    if (!plan) {
+      throw new UnprocessableEntityException({
+        code: 'NO_ADAPTIVE_PLAN',
+        message: 'Not enough evidence yet for an adaptive quiz — take another quiz first.',
+      });
+    }
+
+    const bp = plan.blueprint;
+    const difficulty = ((bp?.difficulty ?? plan.difficulty) as DifficultyLevel) || DifficultyLevel.BEGINNER;
+    const questionCount = bp?.questionCount ?? 5;
+    const targetConcepts = bp ? Object.keys(bp.targetConceptDistribution ?? {}) : [plan.conceptId];
+
+    // Carry the source quiz's documents forward so RAG grounds the next quiz in
+    // the same material — always the student's own documents (isolation intact).
+    let documentIds: string[] = [];
+    if (plan.sourceQuizId) {
+      const source = await this.quizRepository.findById(plan.sourceQuizId);
+      documentIds = source?.documentIds ?? [];
+    }
+
+    const quizId = uuidv4();
+    await this.quizRepository.create({
+      quizId,
+      studentId,
+      topic: plan.topic,
+      difficulty,
+      questionCount,
+      documentIds,
+      challengeMode: false,
+      challengeTopics: [],
+      timeLimitMinutes: null,
+      status: QuizStatus.PENDING,
+      adaptive: true,
+    });
+
+    const jobData: QuizGenerationJob = {
+      quizId,
+      studentId,
+      topic: plan.topic,
+      difficulty,
+      questionCount,
+      documentIds,
+      adaptiveFocus: {
+        purpose: bp?.purpose ?? 'REBUILD_WEAK_CONCEPT',
+        targetConcepts,
+        misconceptionsToProbe: bp?.misconceptionsToProbe ?? [],
+        conceptsToReduce: bp?.conceptsToReduce ?? [],
+      },
+    };
+
+    await this.generationQueue.add('generate', jobData, {
+      attempts: 2,
+      backoff: { type: 'exponential', delay: 3000 },
+      removeOnComplete: 100,
+      removeOnFail: 100,
+    });
+
+    await this.learnerModel.markDecisionGenerated(plan.decisionId, quizId);
+    this.logger.log(`Adaptive quiz ${quizId} queued from decision ${plan.decisionId} (${difficulty}, ${questionCount}q)`);
+
+    return {
+      quizId,
+      status: QuizStatus.PENDING,
+      topic: plan.topic,
+      difficulty,
+      questionCount,
+      adaptive: true,
+      pollUrl: `/api/v1/quizzes/${quizId}/status`,
+    };
+  }
 
   async generate(studentId: string, dto: GenerateQuizDto) {
     const quizId = uuidv4();
@@ -269,6 +350,7 @@ export class QuizService {
       totalQuestions: quiz.totalQuestions,
       submittedAt: quiz.submittedAt,
       documentIds: quiz.documentIds,
+      adaptive: quiz.adaptive ?? false,
       challengeMode: quiz.challengeMode,
       timeLimitMinutes: quiz.timeLimitMinutes,
       challengeTopics: quiz.challengeTopics,

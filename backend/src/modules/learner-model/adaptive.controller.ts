@@ -1,4 +1,4 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, Param } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { LearnerModelService } from './learner-model.service';
@@ -22,5 +22,15 @@ export class AdaptiveController {
     }
     const recommendation = await this.learnerModelService.getRecommendation(user.userId);
     return { data: recommendation };
+  }
+
+  @Get('analysis/:quizId')
+  @ApiOperation({ summary: 'Quiz Intelligence Report for a submitted quiz (null when feature disabled)' })
+  async getAnalysis(@CurrentUser() user: JwtPayload, @Param('quizId') quizId: string) {
+    if (!isFeatureEnabled(this.configService, 'ADAPTIVE_LEARNING_ENABLED')) {
+      return { data: null };
+    }
+    const analysis = await this.learnerModelService.getQuizAnalysis(user.userId, quizId);
+    return { data: analysis };
   }
 }

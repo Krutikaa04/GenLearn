@@ -7,6 +7,13 @@ import { QuizStatus, DifficultyLevel } from '../schemas/quiz.schema';
 
 export const QUIZ_GENERATION_QUEUE = 'quiz-generation';
 
+export interface AdaptiveFocus {
+  purpose: string;
+  targetConcepts: string[];
+  misconceptionsToProbe: string[];
+  conceptsToReduce: string[];
+}
+
 export interface QuizGenerationJob {
   quizId: string;
   studentId: string;
@@ -17,6 +24,8 @@ export interface QuizGenerationJob {
   challengeMode?: boolean;
   challengeTopics?: string[];
   timeLimitMinutes?: number;
+  /** Present for behavior-driven adaptive quizzes; biases the generation prompt. */
+  adaptiveFocus?: AdaptiveFocus;
 }
 
 @Processor(QUIZ_GENERATION_QUEUE)
@@ -31,8 +40,8 @@ export class QuizGeneratorWorker extends WorkerHost {
   }
 
   async process(job: Job<QuizGenerationJob>): Promise<void> {
-    const { quizId, studentId, topic, difficulty, questionCount, documentIds, challengeMode, challengeTopics, timeLimitMinutes } = job.data;
-    this.logger.log(`Generating quiz ${quizId}: "${topic}" (${difficulty}, ${questionCount}q, challenge=${!!challengeMode})`);
+    const { quizId, studentId, topic, difficulty, questionCount, documentIds, challengeMode, challengeTopics, timeLimitMinutes, adaptiveFocus } = job.data;
+    this.logger.log(`Generating quiz ${quizId}: "${topic}" (${difficulty}, ${questionCount}q, challenge=${!!challengeMode}, adaptive=${!!adaptiveFocus})`);
 
     try {
       await this.quizRepository.updateStatus(quizId, QuizStatus.GENERATING);
@@ -47,6 +56,7 @@ export class QuizGeneratorWorker extends WorkerHost {
         challengeMode,
         challengeTopics,
         timeLimitMinutes,
+        adaptiveFocus,
       });
 
       await this.quizRepository.updateStatus(quizId, QuizStatus.READY, {
