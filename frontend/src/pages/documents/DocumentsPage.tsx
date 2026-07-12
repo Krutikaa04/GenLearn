@@ -113,7 +113,7 @@ export function DocumentsPage() {
     items: docs, total: docsTotal, isLoading, hasNextPage, isFetchingNextPage, fetchNextPage,
   } = usePaginatedList(
     ['documents'],
-    (page, pageSize) => documentsApi.list(page, pageSize).then((r) => ({ items: r.data.data, total: r.data.meta.total })),
+    (page, pageSize) => documentsApi.list(page, pageSize).then((r) => ({ items: r.data?.data ?? [], total: r.data?.meta?.total ?? 0 })),
     {
       pageSize: 20,
       refetchInterval: (items) => items.some((d: any) => d.status === 'processing' || d.status === 'embedding') ? 3000 : false,

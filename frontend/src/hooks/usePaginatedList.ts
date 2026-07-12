@@ -28,17 +28,20 @@ export function usePaginatedList<T>(
     queryFn: ({ pageParam }) => fetchPage(pageParam, pageSize),
     initialPageParam: 1,
     getNextPageParam: (_lastPage, allPages) => {
-      const loaded = allPages.reduce((sum, p) => sum + p.items.length, 0);
+      // Guard against a page that resolved without a well-formed items array
+      // (e.g. an unexpected response shape on a cold backend) — a bare
+      // `.length` here would throw during render and trip the ErrorBoundary.
+      const loaded = allPages.reduce((sum, p) => sum + (p.items?.length ?? 0), 0);
       const total = allPages[allPages.length - 1]?.total ?? 0;
       return loaded < total ? allPages.length + 1 : undefined;
     },
     refetchInterval: refetchInterval
-      ? (query) => refetchInterval(query.state.data?.pages.flatMap((p) => p.items) ?? [])
+      ? (query) => refetchInterval(query.state.data?.pages.flatMap((p) => p.items ?? []) ?? [])
       : undefined,
     enabled,
   });
 
-  const items = query.data?.pages.flatMap((p) => p.items) ?? [];
+  const items = query.data?.pages.flatMap((p) => p.items ?? []) ?? [];
   const total = query.data?.pages[query.data.pages.length - 1]?.total ?? 0;
 
   return {
