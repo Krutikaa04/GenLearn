@@ -204,24 +204,27 @@ export class AiGatewayService {
       const response = await firstValueFrom(
         this.httpService.post<T>(`${this.baseUrl}${path}`, body, {
           headers: { 'X-Internal-Key': this.internalKey },
-          // Generous timeout so a Render free-tier cold start of the ai-service
-          // (~50s to wake) plus generation doesn't abort the job. Generation
-          // itself is fast once the service is warm and thinking is disabled.
-          timeout: 180_000,
+          timeout: 120_000,
         }),
       );
       return response.data;
     } catch (err) {
       const axiosErr = err as AxiosError;
       if (axiosErr.response) {
-        this.logger.error(`AI Platform ${path} failed: ${axiosErr.response.status}`, axiosErr.response.data);
+        this.logger.error(
+          `AI Platform ${path} failed: ${axiosErr.response.status}`,
+          axiosErr.response.data,
+        );
         throw new HttpException(
           { code: 'AI_GENERATION_FAILED', message: 'AI service returned an error' },
           502,
         );
       }
       this.logger.error(`AI Platform ${path} unreachable`, axiosErr.message);
-      throw new ServiceUnavailableException({ code: 'AI_PLATFORM_UNAVAILABLE', message: 'AI service is temporarily unavailable' });
+      throw new ServiceUnavailableException({
+        code: 'AI_PLATFORM_UNAVAILABLE',
+        message: 'AI service is temporarily unavailable',
+      });
     }
   }
 }
