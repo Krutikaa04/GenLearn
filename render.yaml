@@ -56,17 +56,17 @@ services:
         sync: false
       - key: ALLOW_VERCEL_PREVIEWS
         value: "false"
-      # Adaptive intelligence rollout flags (default off)
+      # Adaptive intelligence rollout flags
       - key: BEHAVIOR_TELEMETRY_ENABLED
-        value: "false"
+        value: "true"
       - key: ADAPTIVE_LEARNING_ENABLED
-        value: "false"
+        value: "true"
       - key: RAG_GENERATION_ENABLED
-        value: "false"
+        value: "true"
       - key: ADAPTIVE_QUIZ_GENERATION_ENABLED
-        value: "false"
+        value: "true"
       - key: ADAPTIVE_LESSON_GENERATION_ENABLED
-        value: "false"
+        value: "true"
 
   # ---------------------------------------------------------------------------
   # AI service (FastAPI) — optional, deploy when needed
@@ -100,4 +100,4 @@ services:
       - key: REDIS_URL
         sync: false
       - key: RAG_GENERATION_ENABLED
-        value: "false"
+        value: "true"
