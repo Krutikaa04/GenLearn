@@ -6,7 +6,7 @@ import { QuizRepository } from './quiz.repository';
 import { QuizService } from './quiz.service';
 import { QuizController } from './quiz.controller';
 import { QuizGeneratorWorker, QUIZ_GENERATION_QUEUE } from './workers/quiz-generator.processor';
-import { AiGatewayModule } from '../ai-gateway/ai-gateway.module';
+import { CognitiveEngineModule } from '../cognitive-engine/cognitive-engine.module';
 import { AnalyticsModule } from '../analytics/analytics.module';
 import { LearnerModelModule } from '../learner-model/learner-model.module';
 
@@ -14,7 +14,7 @@ import { LearnerModelModule } from '../learner-model/learner-model.module';
   imports: [
     MongooseModule.forFeature([{ name: Quiz.name, schema: QuizSchema }]),
     BullModule.registerQueue({ name: QUIZ_GENERATION_QUEUE }),
-    AiGatewayModule,
+    CognitiveEngineModule,
     AnalyticsModule,
     LearnerModelModule,
   ],

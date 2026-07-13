@@ -2,7 +2,7 @@ import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Logger } from '@nestjs/common';
 import { Job } from 'bullmq';
 import { LessonRepository } from '../lesson.repository';
-import { AiGatewayService } from '../../ai-gateway/ai-gateway.service';
+import { CognitiveEngineService } from '../../cognitive-engine/cognitive-engine.service';
 import { LessonStatus, DifficultyLevel } from '../schemas/lesson.schema';
 
 export const LESSON_GENERATION_QUEUE = 'lesson-generation';
@@ -21,7 +21,7 @@ export class LessonGeneratorWorker extends WorkerHost {
 
   constructor(
     private readonly lessonRepository: LessonRepository,
-    private readonly aiGateway: AiGatewayService,
+    private readonly cognitive: CognitiveEngineService,
   ) {
     super();
   }
@@ -33,7 +33,7 @@ export class LessonGeneratorWorker extends WorkerHost {
     try {
       await this.lessonRepository.updateStatus(lessonId, LessonStatus.GENERATING);
 
-      const result = await this.aiGateway.generateLesson({
+      const result = await this.cognitive.generateLesson({
         lessonId,
         studentId,
         topic,

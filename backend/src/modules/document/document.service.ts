@@ -11,7 +11,7 @@ import { Queue } from 'bullmq';
 import { v4 as uuidv4 } from 'uuid';
 import { DocumentRepository } from './document.repository';
 import { StorageService } from './storage.service';
-import { AiGatewayService } from '../ai-gateway/ai-gateway.service';
+import { CognitiveEngineService } from '../cognitive-engine/cognitive-engine.service';
 import { AnalyticsService } from '../analytics/analytics.service';
 import { DocumentStatus, FileType } from './schemas/document.schema';
 import { DocumentAskDto } from './dto/document-ask.dto';
@@ -37,7 +37,7 @@ export class DocumentService {
   constructor(
     private readonly documentRepository: DocumentRepository,
     private readonly storageService: StorageService,
-    private readonly aiGateway: AiGatewayService,
+    private readonly cognitive: CognitiveEngineService,
     private readonly analyticsService: AnalyticsService,
     @InjectQueue(DOCUMENT_PROCESSING_QUEUE) private readonly processingQueue: Queue,
   ) {}
@@ -146,7 +146,7 @@ export class DocumentService {
       throw new UnprocessableEntityException({ code, message });
     }
 
-    return this.aiGateway.ragQuery({
+    return this.cognitive.ragQuery({
       question: dto.question,
       studentId,
       documentIds: [documentId],

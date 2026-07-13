@@ -1,13 +1,13 @@
 import { Injectable } from '@nestjs/common';
-import { AiGatewayService } from '../ai-gateway/ai-gateway.service';
+import { CognitiveEngineService } from '../cognitive-engine/cognitive-engine.service';
 import { GenerateStudyPlanDto } from './dto/generate-studyplan.dto';
 
 @Injectable()
 export class StudyPlanService {
-  constructor(private readonly aiGateway: AiGatewayService) {}
+  constructor(private readonly cognitive: CognitiveEngineService) {}
 
   async generate(userId: string, dto: GenerateStudyPlanDto) {
-    return this.aiGateway.generateStudyPlan({
+    return this.cognitive.generateStudyPlan({
       userId,
       goal: dto.goal,
       targetDate: dto.targetDate,

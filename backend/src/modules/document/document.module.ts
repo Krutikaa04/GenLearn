@@ -8,7 +8,7 @@ import { StorageService } from './storage.service';
 import { DocumentService } from './document.service';
 import { DocumentController } from './document.controller';
 import { DocumentProcessorWorker, DOCUMENT_PROCESSING_QUEUE } from './workers/document-processor.processor';
-import { AiGatewayModule } from '../ai-gateway/ai-gateway.module';
+import { CognitiveEngineModule } from '../cognitive-engine/cognitive-engine.module';
 import { AnalyticsModule } from '../analytics/analytics.module';
 
 @Module({
@@ -18,11 +18,11 @@ import { AnalyticsModule } from '../analytics/analytics.module';
       { name: DocumentChunk.name, schema: DocumentChunkSchema },
     ]),
     BullModule.registerQueue({ name: DOCUMENT_PROCESSING_QUEUE }),
-    AiGatewayModule,
+    CognitiveEngineModule,
     AnalyticsModule,
   ],
   controllers: [DocumentController],
   providers: [DocumentRepository, StorageService, DocumentService, DocumentProcessorWorker],
-  exports: [DocumentService, AiGatewayModule],
+  exports: [DocumentService, CognitiveEngineModule],
 })
 export class DocumentModule {}

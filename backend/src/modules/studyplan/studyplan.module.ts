@@ -1,10 +1,10 @@
 import { Module } from '@nestjs/common';
 import { StudyPlanController } from './studyplan.controller';
 import { StudyPlanService } from './studyplan.service';
-import { AiGatewayModule } from '../ai-gateway/ai-gateway.module';
+import { CognitiveEngineModule } from '../cognitive-engine/cognitive-engine.module';
 
 @Module({
-  imports: [AiGatewayModule],
+  imports: [CognitiveEngineModule],
   controllers: [StudyPlanController],
   providers: [StudyPlanService],
 })

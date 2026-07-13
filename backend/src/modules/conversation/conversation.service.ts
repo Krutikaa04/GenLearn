@@ -1,13 +1,13 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { v4 as uuidv4 } from 'uuid';
 import { ConversationRepository } from './conversation.repository';
-import { AiGatewayService } from '../ai-gateway/ai-gateway.service';
+import { CognitiveEngineService } from '../cognitive-engine/cognitive-engine.service';
 
 @Injectable()
 export class ConversationService {
   constructor(
     private readonly conversationRepository: ConversationRepository,
-    private readonly aiGateway: AiGatewayService,
+    private readonly cognitive: CognitiveEngineService,
   ) {}
 
   async sendMessage(
@@ -37,7 +37,7 @@ export class ConversationService {
 
     // Only persist once the AI call succeeds — a failed generation must not
     // leave behind an empty conversation record.
-    const result = await this.aiGateway.tutorChat({
+    const result = await this.cognitive.tutorChat({
       studentId,
       topic,
       message: params.message,

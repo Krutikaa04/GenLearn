@@ -3,7 +3,7 @@ import { Logger } from '@nestjs/common';
 import { Job } from 'bullmq';
 import * as fs from 'fs/promises';
 import { DocumentRepository } from '../document.repository';
-import { AiGatewayService } from '../../ai-gateway/ai-gateway.service';
+import { CognitiveEngineService } from '../../cognitive-engine/cognitive-engine.service';
 import { DocumentStatus } from '../schemas/document.schema';
 
 export const DOCUMENT_PROCESSING_QUEUE = 'document-processing';
@@ -21,7 +21,7 @@ export class DocumentProcessorWorker extends WorkerHost {
 
   constructor(
     private readonly documentRepository: DocumentRepository,
-    private readonly aiGateway: AiGatewayService,
+    private readonly cognitive: CognitiveEngineService,
   ) {
     super();
   }
@@ -38,7 +38,7 @@ export class DocumentProcessorWorker extends WorkerHost {
       // relying on ai-service reading storagePath from its own local disk.
       const fileBuffer = await fs.readFile(storagePath);
 
-      const result = await this.aiGateway.processDocument({
+      const result = await this.cognitive.processDocument({
         documentId,
         studentId,
         fileContent: fileBuffer.toString('base64'),

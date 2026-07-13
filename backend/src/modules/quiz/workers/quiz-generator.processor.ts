@@ -2,7 +2,7 @@ import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Logger } from '@nestjs/common';
 import { Job } from 'bullmq';
 import { QuizRepository } from '../quiz.repository';
-import { AiGatewayService } from '../../ai-gateway/ai-gateway.service';
+import { CognitiveEngineService } from '../../cognitive-engine/cognitive-engine.service';
 import { QuizStatus, DifficultyLevel } from '../schemas/quiz.schema';
 
 export const QUIZ_GENERATION_QUEUE = 'quiz-generation';
@@ -34,7 +34,7 @@ export class QuizGeneratorWorker extends WorkerHost {
 
   constructor(
     private readonly quizRepository: QuizRepository,
-    private readonly aiGateway: AiGatewayService,
+    private readonly cognitive: CognitiveEngineService,
   ) {
     super();
   }
@@ -46,7 +46,7 @@ export class QuizGeneratorWorker extends WorkerHost {
     try {
       await this.quizRepository.updateStatus(quizId, QuizStatus.GENERATING);
 
-      const result = await this.aiGateway.generateQuiz({
+      const result = await this.cognitive.generateQuiz({
         quizId,
         studentId,
         topic,

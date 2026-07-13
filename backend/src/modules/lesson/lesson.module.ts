@@ -6,14 +6,14 @@ import { LessonRepository } from './lesson.repository';
 import { LessonService } from './lesson.service';
 import { LessonController } from './lesson.controller';
 import { LessonGeneratorWorker, LESSON_GENERATION_QUEUE } from './workers/lesson-generator.processor';
-import { AiGatewayModule } from '../ai-gateway/ai-gateway.module';
+import { CognitiveEngineModule } from '../cognitive-engine/cognitive-engine.module';
 import { AnalyticsModule } from '../analytics/analytics.module';
 
 @Module({
   imports: [
     MongooseModule.forFeature([{ name: Lesson.name, schema: LessonSchema }]),
     BullModule.registerQueue({ name: LESSON_GENERATION_QUEUE }),
-    AiGatewayModule,
+    CognitiveEngineModule,
     AnalyticsModule,
   ],
   controllers: [LessonController],

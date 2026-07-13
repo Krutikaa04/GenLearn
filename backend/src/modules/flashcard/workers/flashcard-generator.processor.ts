@@ -2,7 +2,7 @@ import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Logger } from '@nestjs/common';
 import { Job } from 'bullmq';
 import { FlashcardRepository } from '../flashcard.repository';
-import { AiGatewayService } from '../../ai-gateway/ai-gateway.service';
+import { CognitiveEngineService } from '../../cognitive-engine/cognitive-engine.service';
 import { FlashcardSetStatus, FlashcardSourceType } from '../schemas/flashcard.schema';
 
 export const FLASHCARD_GENERATION_QUEUE = 'flashcard-generation';
@@ -21,7 +21,7 @@ export class FlashcardGeneratorWorker extends WorkerHost {
 
   constructor(
     private readonly flashcardRepository: FlashcardRepository,
-    private readonly aiGateway: AiGatewayService,
+    private readonly cognitive: CognitiveEngineService,
   ) {
     super();
   }
@@ -33,7 +33,7 @@ export class FlashcardGeneratorWorker extends WorkerHost {
     try {
       await this.flashcardRepository.updateStatus(setId, FlashcardSetStatus.GENERATING);
 
-      const result = await this.aiGateway.generateFlashcards({
+      const result = await this.cognitive.generateFlashcards({
         setId,
         studentId,
         sourceType,
