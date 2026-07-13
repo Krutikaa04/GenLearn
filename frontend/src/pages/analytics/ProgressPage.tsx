@@ -1,11 +1,106 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { TrendingUp, BookOpen, BrainCircuit, Layers, FileText, Zap, AlertTriangle, BarChart3, ArrowUpDown } from 'lucide-react';
+import { TrendingUp, BookOpen, BrainCircuit, Layers, FileText, Zap, AlertTriangle, BarChart3, ArrowUpDown, CheckCircle, XCircle, ChevronDown, Clock, Sparkles } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { analyticsApi } from '../../api/analytics.api';
+import { adaptiveApi } from '../../api/adaptive.api';
 import { Card } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
+
+function questionLabelStyle(label: string): { background: string; color: string } {
+  switch (label) {
+    case 'Confident':
+    case 'Correct':
+      return { background: 'var(--success-light)', color: 'var(--success)' };
+    case 'Correct but unsure':
+    case 'Uncertain':
+      return { background: 'var(--warning-light)', color: 'var(--warning)' };
+    case 'Productive struggle':
+      return { background: 'var(--brand-light)', color: 'var(--brand)' };
+    case 'Likely guess':
+    case 'Incorrect':
+      return { background: 'var(--danger-light)', color: 'var(--danger)' };
+    default:
+      return { background: 'var(--bg-subtle)', color: 'var(--text-muted)' };
+  }
+}
+
+/**
+ * Per-question behavioral breakdown of the most recent quiz on each topic.
+ * Only renders when the adaptive feature is on and behavior evidence exists —
+ * otherwise the endpoint returns [] and this section is hidden.
+ */
+function QuestionAnalysisSection() {
+  const [openTopic, setOpenTopic] = useState<string | null>(null);
+  const { data = [] } = useQuery({
+    queryKey: ['question-analysis'],
+    queryFn: () => adaptiveApi.getQuestionAnalysis().then((r) => r.data.data),
+  });
+
+  if (!Array.isArray(data) || data.length === 0) return null;
+
+  return (
+    <Card padding="md">
+      <div className="flex items-center gap-2 mb-4">
+        <Sparkles className="w-4 h-4" style={{ color: 'var(--brand)' }} />
+        <h2 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Question-level analysis</h2>
+        <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: 'var(--brand-light)', color: 'var(--brand)' }}>
+          latest quiz per topic
+        </span>
+      </div>
+      <div className="space-y-2">
+        {data.map((t: any) => {
+          const open = openTopic === t.topic;
+          const date = t.submittedAt ? new Date(t.submittedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : '';
+          return (
+            <div key={t.quizId} className="rounded-xl border overflow-hidden" style={{ borderColor: 'var(--border)' }}>
+              <button
+                onClick={() => setOpenTopic(open ? null : t.topic)}
+                className="w-full flex items-center gap-3 p-3 hover:bg-[var(--bg-subtle)] transition-colors text-left"
+              >
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate" style={{ color: 'var(--text-primary)' }}>{t.topic}</p>
+                  <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{t.questions.length} questions · {date}</p>
+                </div>
+                <span className="text-sm font-bold shrink-0" style={{ color: t.scorePercent >= 70 ? 'var(--success)' : 'var(--warning)' }}>{t.scorePercent}%</span>
+                <ChevronDown className="w-4 h-4 shrink-0 transition-transform" style={{ color: 'var(--text-muted)', transform: open ? 'rotate(180deg)' : 'none' }} />
+              </button>
+              {open && (
+                <div className="border-t divide-y" style={{ borderColor: 'var(--border)' }}>
+                  {t.questions.map((q: any) => (
+                    <div key={q.index} className="flex items-start gap-2 p-3" style={{ background: 'var(--bg-surface)' }}>
+                      {q.isCorrect
+                        ? <CheckCircle className="w-4 h-4 shrink-0 mt-0.5" style={{ color: 'var(--success)' }} />
+                        : <XCircle className="w-4 h-4 shrink-0 mt-0.5" style={{ color: 'var(--danger)' }} />}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm" style={{ color: 'var(--text-primary)' }}>{q.index}. {q.text}</p>
+                        <div className="flex items-center gap-2 mt-1 flex-wrap">
+                          <span className="text-xs font-semibold px-2 py-0.5 rounded-full" style={questionLabelStyle(q.label)}>{q.label}</span>
+                          {q.timeMs != null && (
+                            <span className="flex items-center gap-1 text-xs" style={{ color: 'var(--text-muted)' }}>
+                              <Clock className="w-3 h-3" /> {(q.timeMs / 1000).toFixed(0)}s
+                            </span>
+                          )}
+                          {q.answerChanges > 0 && (
+                            <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{q.answerChanges} answer change{q.answerChanges > 1 ? 's' : ''}</span>
+                          )}
+                          {q.concept && (
+                            <span className="text-xs capitalize" style={{ color: 'var(--text-muted)' }}>· {q.concept}</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </Card>
+  );
+}
 
 type SortKey = 'mastery' | 'name' | 'quizzes' | 'recent';
 type SortDir = 'asc' | 'desc';
@@ -174,6 +269,9 @@ export function ProgressPage() {
           </div>
         </Card>
       )}
+
+      {/* Per-question behavioral analysis (adaptive) */}
+      <QuestionAnalysisSection />
 
       {/* Full topic table */}
       <div className="rounded-2xl border overflow-hidden" style={{ borderColor: 'var(--border)' }}>

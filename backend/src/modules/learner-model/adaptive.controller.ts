@@ -33,4 +33,14 @@ export class AdaptiveController {
     const analysis = await this.learnerModelService.getQuizAnalysis(user.userId, quizId);
     return { data: analysis };
   }
+
+  @Get('question-analysis')
+  @ApiOperation({ summary: 'Per-question behavioral breakdown of the latest quiz on each topic' })
+  async getQuestionAnalysis(@CurrentUser() user: JwtPayload) {
+    if (!isFeatureEnabled(this.configService, 'ADAPTIVE_LEARNING_ENABLED')) {
+      return { data: [] };
+    }
+    const analysis = await this.learnerModelService.getRecentQuestionAnalysis(user.userId);
+    return { data: analysis };
+  }
 }

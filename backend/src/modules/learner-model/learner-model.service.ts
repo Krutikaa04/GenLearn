@@ -89,6 +89,76 @@ export class LearnerModelService {
   }
 
   /**
+   * Per-question behavioral breakdown of the most recent submitted quiz on each
+   * topic — for the Progress report. Joins stored correctness with behavior
+   * features (time, answer changes) and turns each into a plain-language label.
+   * Degrades gracefully when telemetry is absent (label from correctness only).
+   */
+  async getRecentQuestionAnalysis(studentId: string) {
+    const quizzes = await this.quizModel
+      .find({ studentId, status: QuizStatus.SUBMITTED, submittedAt: { $ne: null } })
+      .sort({ submittedAt: -1 })
+      .limit(60)
+      .exec();
+
+    const seenTopics = new Set<string>();
+    const perTopic: unknown[] = [];
+
+    for (const quiz of quizzes) {
+      if (seenTopics.has(quiz.topic) || !quiz.answers?.length) continue;
+      seenTopics.add(quiz.topic);
+
+      const behavior = await this.behaviorModel.findOne({ quizId: quiz.quizId }).exec();
+      const featByQuestion = new Map((behavior?.perQuestion ?? []).map((q) => [q.questionId, q]));
+      const questionById = new Map(quiz.questions.map((q) => [q.questionId, q]));
+
+      const correct = quiz.answers.filter((a) => a.isCorrect).length;
+      const questions = quiz.answers.map((a, i) => {
+        const q = questionById.get(a.questionId);
+        const f = featByQuestion.get(a.questionId);
+        const timeMs = f?.timeToFirstAnswerMs ?? f?.dwellMs ?? null;
+        const answerChanges = f?.answerChanges ?? 0;
+        return {
+          index: i + 1,
+          text: q?.text ?? `Question ${i + 1}`,
+          concept: (q?.primaryConceptId ?? '').replace(/-/g, ' ') || null,
+          isCorrect: a.isCorrect,
+          timeMs,
+          answerChanges,
+          label: this.questionLabel(a.isCorrect, timeMs, answerChanges),
+        };
+      });
+
+      perTopic.push({
+        topic: quiz.topic,
+        quizId: quiz.quizId,
+        submittedAt: quiz.submittedAt,
+        scorePercent: Math.round((correct / quiz.answers.length) * 100),
+        questions,
+      });
+
+      if (perTopic.length >= 12) break;
+    }
+
+    return perTopic;
+  }
+
+  /** Plain-language read of one answer from correctness + timing + volatility. */
+  private questionLabel(isCorrect: boolean, timeMs: number | null, answerChanges: number): string {
+    const fast = timeMs != null && timeMs < 6000;
+    const slow = timeMs != null && timeMs > 45000;
+    if (isCorrect) {
+      if (answerChanges === 0 && fast) return 'Confident';
+      if (answerChanges >= 2 || slow) return 'Correct but unsure';
+      return 'Correct';
+    }
+    if (fast && answerChanges === 0) return 'Likely guess';
+    if (slow) return 'Productive struggle';
+    if (answerChanges >= 2) return 'Uncertain';
+    return 'Incorrect';
+  }
+
+  /**
    * Assembles the student-facing "Quiz Intelligence Report" for one submitted
    * quiz: performance, concept mastery bands, behavioral observations, possible
    * misconceptions, and what the next adaptive quiz will do. Every section is

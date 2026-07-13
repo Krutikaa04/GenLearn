@@ -19,7 +19,9 @@ import { staggerContainer, staggerItem } from '../../lib/motion';
 
 const statusColor: Record<string, any> = { pending: 'gray', generating: 'yellow', ready: 'green', failed: 'red' };
 
-function GenerateModal({ onClose, defaultTopic = '', defaultDocId = '', defaultDifficulty = 'beginner' }: { onClose: () => void; defaultTopic?: string; defaultDocId?: string; defaultDifficulty?: string }) {
+const MASTERY_THRESHOLD = 80;
+
+function GenerateModal({ onClose, onAdaptive, defaultTopic = '', defaultDocId = '', defaultDifficulty = 'beginner' }: { onClose: () => void; onAdaptive: () => Promise<void>; defaultTopic?: string; defaultDocId?: string; defaultDifficulty?: string }) {
   const qc = useQueryClient();
   const [mode, setMode] = useState<'normal' | 'challenge'>('normal');
   const [topic, setTopic] = useState(defaultTopic);
@@ -35,6 +37,28 @@ function GenerateModal({ onClose, defaultTopic = '', defaultDocId = '', defaultD
     queryKey: ['documents'],
     queryFn: () => documentsApi.list().then((r) => r.data.data.filter((d: any) => d.status === 'ready')),
   });
+
+  // Topic mastery — used to block manual re-generation of an already-practiced
+  // but not-yet-mastered topic, steering the learner to the adaptive path instead.
+  const { data: topicMastery = [] } = useQuery({
+    queryKey: ['progress-topics'],
+    queryFn: () => analyticsApi.getProgress().then((r) => r.data.data?.topicMastery ?? []),
+  });
+
+  // Only enforce the block when the system actually has an adaptive plan ready —
+  // otherwise (adaptive off, or not enough evidence yet) manual stays open so the
+  // learner is never stranded with no way forward.
+  const { data: recommendation } = useQuery({
+    queryKey: ['adaptive-recommendation'],
+    queryFn: () => adaptiveApi.getRecommendation().then((r) => r.data.data),
+  });
+  const hasAdaptivePlan = !!recommendation;
+
+  const normalizedTopic = topic.trim().toLowerCase();
+  const matchedTopic = mode === 'normal' && normalizedTopic
+    ? topicMastery.find((t: any) => (t.topic ?? '').trim().toLowerCase() === normalizedTopic)
+    : null;
+  const blockedByMastery = !!matchedTopic && matchedTopic.masteryScore < MASTERY_THRESHOLD && hasAdaptivePlan;
 
   const mutation = useMutation({
     mutationFn: () => quizzesApi.generate({
@@ -57,7 +81,7 @@ function GenerateModal({ onClose, defaultTopic = '', defaultDocId = '', defaultD
     setTopicInput('');
   };
 
-  const canGenerate = mode === 'normal' ? !!topic.trim() : challengeTopics.length > 0;
+  const canGenerate = mode === 'normal' ? (!!topic.trim() && !blockedByMastery) : challengeTopics.length > 0;
 
   return (
     <Modal onClose={onClose} maxWidth="max-w-md" className="p-6 space-y-5 max-h-[90vh] overflow-y-auto">
@@ -180,6 +204,17 @@ function GenerateModal({ onClose, defaultTopic = '', defaultDocId = '', defaultD
                 ))}
               </div>
             )}
+          </div>
+        )}
+
+        {blockedByMastery && (
+          <div className="rounded-xl p-3 space-y-2" style={{ background: 'var(--warning-light)', border: '1px solid var(--warning)' }}>
+            <p className="text-xs" style={{ color: 'var(--warning)' }}>
+              You've already practiced "{matchedTopic.topic}" ({matchedTopic.masteryScore}% mastery). Instead of regenerating it yourself, keep going with an adaptive quiz — it targets exactly the concepts you got wrong. Manual generation unlocks again once you reach {MASTERY_THRESHOLD}% mastery.
+            </p>
+            <Button size="sm" onClick={async () => { onClose(); await onAdaptive(); }} className="w-full">
+              <Sparkles className="w-4 h-4" /> Continue adaptively
+            </Button>
           </div>
         )}
 
@@ -820,7 +855,7 @@ export function QuizzesPage() {
         </div>
       )}
 
-      {showModal && <GenerateModal onClose={() => setShowModal(false)} defaultTopic={defaultTopic} defaultDocId={defaultDocId} defaultDifficulty={defaultDifficulty} />}
+      {showModal && <GenerateModal onClose={() => setShowModal(false)} onAdaptive={startAdaptiveNext} defaultTopic={defaultTopic} defaultDocId={defaultDocId} defaultDifficulty={defaultDifficulty} />}
       {takingId && <QuizTaker key={takingId} quizId={takingId} onClose={() => { setTakingId(null); qc.invalidateQueries({ queryKey: ['quizzes'] }); }} onStartNext={startAdaptiveNext} />}
       {reviewId && <ReviewModal quizId={reviewId} onClose={() => setReviewId(null)} />}
     </div>
