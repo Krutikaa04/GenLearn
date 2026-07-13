@@ -204,7 +204,10 @@ export class AiGatewayService {
       const response = await firstValueFrom(
         this.httpService.post<T>(`${this.baseUrl}${path}`, body, {
           headers: { 'X-Internal-Key': this.internalKey },
-          timeout: 120_000,
+          // Generous timeout so a Render free-tier cold start of the ai-service
+          // (~50s to wake) plus generation doesn't abort the job. Generation
+          // itself is fast once the service is warm and thinking is disabled.
+          timeout: 180_000,
         }),
       );
       return response.data;
