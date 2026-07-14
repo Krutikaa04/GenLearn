@@ -14,6 +14,7 @@ vi.mock('../../api/analytics.api', () => ({
 vi.mock('../../api/adaptive.api', () => ({
   adaptiveApi: {
     getRecommendation: vi.fn(),
+    getPlan: vi.fn(),
   },
 }));
 
@@ -57,6 +58,7 @@ beforeEach(() => {
   (analyticsApi.getProgress as any).mockResolvedValue({ data: { data: mockProgress } });
   (analyticsApi.getWeakTopics as any).mockResolvedValue({ data: { data: [] } });
   (adaptiveApi.getRecommendation as any).mockResolvedValue({ data: { data: null } });
+  (adaptiveApi.getPlan as any).mockResolvedValue({ data: { data: null } });
 });
 
 describe('DashboardPage', () => {
@@ -217,5 +219,32 @@ describe('DashboardPage', () => {
 
     expect(await screen.findByText(/Rishi/)).toBeInTheDocument();
     expect(screen.queryByText('Recommended next')).not.toBeInTheDocument();
+  });
+
+  it('renders the Continue Learning card with objective and estimated time when a plan is active', async () => {
+    (adaptiveApi.getPlan as any).mockResolvedValue({
+      data: {
+        data: {
+          status: 'active',
+          objective: 'Build a solid foundation in recursion base case (raise mastery from 40% toward 70%)',
+          topic: 'Recursion',
+          targetConcepts: ['recursion-base-case'],
+          estimatedMinutes: 12,
+          recommendedQuiz: { needed: true },
+        },
+      },
+    });
+
+    render(<DashboardPage />, { wrapper: wrapper() });
+
+    expect(await screen.findByText(/Build a solid foundation in recursion base case/)).toBeInTheDocument();
+    expect(screen.getByText(/~12 min/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Continue learning/i })).toBeInTheDocument();
+  });
+
+  it('does not render the Continue Learning card when there is no plan', async () => {
+    render(<DashboardPage />, { wrapper: wrapper() });
+    await screen.findByText(/Rishi/);
+    expect(screen.queryByRole('button', { name: /Continue learning/i })).not.toBeInTheDocument();
   });
 });

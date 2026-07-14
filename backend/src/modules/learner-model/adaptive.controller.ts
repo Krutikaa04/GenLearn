@@ -2,6 +2,7 @@ import { Controller, Get, Param } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { LearnerModelService } from './learner-model.service';
+import { AutonomousPlannerService } from './autonomous-planner.service';
 import { isFeatureEnabled } from '../../common/feature-flags';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import type { JwtPayload } from '../../common/decorators/current-user.decorator';
@@ -11,6 +12,7 @@ import type { JwtPayload } from '../../common/decorators/current-user.decorator'
 export class AdaptiveController {
   constructor(
     private readonly learnerModelService: LearnerModelService,
+    private readonly planner: AutonomousPlannerService,
     private readonly configService: ConfigService,
   ) {}
 
@@ -42,5 +44,15 @@ export class AdaptiveController {
     }
     const analysis = await this.learnerModelService.getRecentQuestionAnalysis(user.userId);
     return { data: analysis };
+  }
+
+  @Get('plan')
+  @ApiOperation({ summary: "The learner's single active Learning Plan for the Continue Learning flow (null when feature disabled)" })
+  async getPlan(@CurrentUser() user: JwtPayload) {
+    if (!isFeatureEnabled(this.configService, 'ADAPTIVE_LEARNING_ENABLED')) {
+      return { data: null };
+    }
+    const plan = await this.planner.getCurrentPlan(user.userId);
+    return { data: plan };
   }
 }

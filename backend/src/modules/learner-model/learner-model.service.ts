@@ -14,6 +14,7 @@ import { buildQuizBlueprint, QuizBlueprint } from './quiz-blueprint';
 import { DecisionStatus, DecisionTrigger } from './schemas/pedagogical-decision.schema';
 import { BehaviorFeatures, BehaviorFeaturesDocument } from '../telemetry/schemas/behavior-features.schema';
 import { LearnerProfileService, ConceptChange } from './learner-profile.service';
+import { AutonomousPlannerService } from './autonomous-planner.service';
 import { computeConceptTrend, computeReviewPriority } from './learner-intelligence';
 
 export interface SessionBehaviorInput {
@@ -36,6 +37,7 @@ export class LearnerModelService {
     @InjectModel(BehaviorFeatures.name)
     private readonly behaviorModel: Model<BehaviorFeaturesDocument>,
     private readonly learnerProfile: LearnerProfileService,
+    private readonly planner: AutonomousPlannerService,
   ) {}
 
   async getConceptMastery(studentId: string) {
@@ -442,6 +444,15 @@ export class LearnerModelService {
       });
     } catch (err) {
       this.logger.warn(`Profile update failed for quiz ${quizId}: ${(err as Error).message}`);
+    }
+
+    // Autonomous Learning Planner: regenerate the single active plan so the
+    // "Continue Learning" action always has the next session ready (Sprint 3).
+    // Best-effort — never let planning break the learner-model update.
+    try {
+      await this.planner.regenerate(studentId);
+    } catch (err) {
+      this.logger.warn(`Planner regeneration failed for ${studentId}: ${(err as Error).message}`);
     }
   }
 

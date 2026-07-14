@@ -6,6 +6,7 @@ import {
   ConceptMasteryDocument,
 } from '../learner-model/schemas/concept-mastery.schema';
 import { LearnerProfileService } from '../learner-model/learner-profile.service';
+import { AutonomousPlannerService } from '../learner-model/autonomous-planner.service';
 import { ConceptStanding, LearnerContext } from './ai-task.types';
 
 const WEAK_MAX = 50;
@@ -27,27 +28,36 @@ export class LearnerContextBuilder {
     @InjectModel(ConceptMastery.name)
     private readonly masteryModel: Model<ConceptMasteryDocument>,
     private readonly profileService: LearnerProfileService,
+    private readonly planner: AutonomousPlannerService,
   ) {}
 
   async build(studentId: string): Promise<LearnerContext> {
     const empty = this.emptyContext(studentId);
     if (!studentId) return empty;
 
-    // Persistent Learner Intelligence bundle (never throws → null on failure).
-    const profile = await this.profileService.buildIntelligenceContext(studentId).catch((err) => {
-      this.logger.warn(`Profile context failed for ${studentId}: ${(err as Error).message}`);
-      return null;
-    });
+    // Persistent Learner Intelligence + the active Learning Plan. Both are
+    // read-only here and defensive (null on failure) so context assembly never
+    // blocks a generation task.
+    const [profile, plan] = await Promise.all([
+      this.profileService.buildIntelligenceContext(studentId).catch((err) => {
+        this.logger.warn(`Profile context failed for ${studentId}: ${(err as Error).message}`);
+        return null;
+      }),
+      this.planner.getPlanSummary(studentId).catch((err) => {
+        this.logger.warn(`Plan context failed for ${studentId}: ${(err as Error).message}`);
+        return null;
+      }),
+    ]);
 
     let rows: ConceptMasteryDocument[] = [];
     try {
       rows = await this.masteryModel.find({ studentId }).lean<ConceptMasteryDocument[]>().exec();
     } catch (err) {
       this.logger.warn(`Context assembly failed for ${studentId}: ${(err as Error).message}`);
-      return { ...empty, profile };
+      return { ...empty, profile, plan };
     }
 
-    if (!rows.length) return { ...empty, profile };
+    if (!rows.length) return { ...empty, profile, plan };
 
     const standing = (m: ConceptMasteryDocument): ConceptStanding => ({
       conceptId: m.conceptId,
@@ -83,6 +93,7 @@ export class LearnerContextBuilder {
       hasHistory: true,
       assembledAt: new Date().toISOString(),
       profile,
+      plan,
     };
   }
 
@@ -96,6 +107,7 @@ export class LearnerContextBuilder {
       hasHistory: false,
       assembledAt: new Date().toISOString(),
       profile: null,
+      plan: null,
     };
   }
 }

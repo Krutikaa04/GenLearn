@@ -46,6 +46,14 @@ export interface LearnerContext {
    * This is the single learner-intelligence object every AI task receives.
    */
   profile: Record<string, unknown> | null;
+
+  /**
+   * The learner's single active Learning Plan (Sprint 3): current objective,
+   * target concepts, and revision needs. The Cognitive Engine surfaces the
+   * planner's decision to every generation task so sequencing is owned by the
+   * planner, not the business modules. Null until a plan exists.
+   */
+  plan: Record<string, unknown> | null;
 }
 
 /** Execution metadata captured for every AI call — the basis of central logging. */

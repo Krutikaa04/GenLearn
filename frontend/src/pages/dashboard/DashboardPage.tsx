@@ -1,12 +1,86 @@
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { FileText, BookOpen, BrainCircuit, Layers, TrendingUp, ArrowRight, Zap, AlertTriangle, Sparkles } from 'lucide-react';
+import { FileText, BookOpen, BrainCircuit, Layers, TrendingUp, ArrowRight, Zap, AlertTriangle, Sparkles, Compass, Loader2, Clock } from 'lucide-react';
 import { motion } from 'framer-motion';
+import toast from 'react-hot-toast';
 import { analyticsApi } from '../../api/analytics.api';
 import { adaptiveApi } from '../../api/adaptive.api';
+import { quizzesApi } from '../../api/quizzes.api';
 import { useAuthStore } from '../../store/auth.store';
 import { Card } from '../../components/ui/Card';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { staggerContainer, staggerItem } from '../../lib/motion';
+
+interface LearningPlan {
+  status: 'active' | 'awaiting_topic';
+  objective: string;
+  topic: string | null;
+  targetConcepts: string[];
+  estimatedMinutes: number;
+  recommendedLesson?: { needed?: boolean };
+  recommendedQuiz?: { needed?: boolean };
+}
+
+/**
+ * The primary learning action (Sprint 3): GenLearn has already planned the next
+ * session, so "Continue Learning" starts it directly instead of asking the
+ * learner to configure a quiz. Manual generation stays available below as the
+ * secondary path for new topics / custom practice.
+ */
+function ContinueLearningCard({ plan }: { plan: LearningPlan }) {
+  const navigate = useNavigate();
+  const [starting, setStarting] = useState(false);
+  const awaiting = plan.status === 'awaiting_topic';
+
+  const continueLearning = async () => {
+    if (awaiting) { navigate('/quizzes'); return; }
+    setStarting(true);
+    try {
+      await quizzesApi.generateAdaptive();
+      toast.success('Your next session is ready');
+      navigate('/quizzes');
+    } catch (err: any) {
+      if (err?.response?.data?.error?.code === 'NO_ADAPTIVE_PLAN') {
+        navigate(plan.topic ? `/quizzes?topic=${encodeURIComponent(plan.topic)}` : '/quizzes');
+      } else {
+        toast.error('Could not start the next session — try again from Quizzes.');
+      }
+    } finally {
+      setStarting(false);
+    }
+  };
+
+  return (
+    <Card padding="lg" glass className="relative overflow-hidden">
+      <div className="pointer-events-none absolute -top-16 -right-10 w-56 h-56 rounded-full opacity-20 blur-3xl" style={{ background: 'var(--brand-gradient)' }} />
+      <div className="relative flex flex-col md:flex-row md:items-center gap-4 justify-between">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2 mb-1.5">
+            <Compass className="w-4 h-4" style={{ color: 'var(--brand)' }} />
+            <p className="text-xs font-bold uppercase tracking-widest" style={{ color: 'var(--brand)' }}>
+              {awaiting ? 'Start learning' : 'Continue learning'}
+            </p>
+          </div>
+          <p className="text-lg font-semibold leading-snug" style={{ color: 'var(--text-primary)' }}>{plan.objective}</p>
+          <div className="flex items-center gap-3 mt-2 flex-wrap text-xs" style={{ color: 'var(--text-muted)' }}>
+            {plan.topic && <span className="font-medium" style={{ color: 'var(--text-secondary)' }}>{plan.topic}</span>}
+            <span className="inline-flex items-center gap-1"><Clock className="w-3.5 h-3.5" />~{plan.estimatedMinutes} min</span>
+            {plan.recommendedLesson?.needed && <span>· includes a short lesson</span>}
+          </div>
+        </div>
+        <button
+          onClick={continueLearning}
+          disabled={starting}
+          className="shrink-0 inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl text-white text-sm font-semibold transition-opacity hover:opacity-90 disabled:opacity-60"
+          style={{ background: 'var(--brand)' }}
+        >
+          {starting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+          {awaiting ? 'Choose a topic' : 'Continue learning'}
+        </button>
+      </div>
+    </Card>
+  );
+}
 
 interface Recommendation {
   decisionId: string;
@@ -96,6 +170,10 @@ export function DashboardPage() {
     queryKey: ['adaptive-recommendation'],
     queryFn: () => adaptiveApi.getRecommendation().then((r) => r.data.data),
   });
+  const { data: plan } = useQuery<LearningPlan | null>({
+    queryKey: ['learning-plan'],
+    queryFn: () => adaptiveApi.getPlan().then((r) => r.data.data),
+  });
 
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
@@ -136,6 +214,9 @@ export function DashboardPage() {
           {data?.currentStreak ?? 0} day streak
         </div>
       </div>
+
+      {/* Continue Learning — the primary, AI-planned next session (Sprint 3) */}
+      {plan && <ContinueLearningCard plan={plan} />}
 
       {/* Hero metrics — bento: mastery card wider than streak */}
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
