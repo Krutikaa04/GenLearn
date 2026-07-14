@@ -5,6 +5,7 @@ import {
   ConceptMastery,
   ConceptMasterySchema,
 } from '../learner-model/schemas/concept-mastery.schema';
+import { LearnerModelModule } from '../learner-model/learner-model.module';
 import { CognitiveEngineService } from './cognitive-engine.service';
 import { LearnerContextBuilder } from './learner-context.builder';
 import { PromptBuilder } from './prompt-builder';
@@ -19,6 +20,7 @@ import { ResponseValidator } from './response-validator';
 @Module({
   imports: [
     AiGatewayModule,
+    LearnerModelModule,
     MongooseModule.forFeature([{ name: ConceptMastery.name, schema: ConceptMasterySchema }]),
   ],
   providers: [CognitiveEngineService, LearnerContextBuilder, PromptBuilder, ResponseValidator],

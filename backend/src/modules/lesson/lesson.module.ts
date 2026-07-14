@@ -7,6 +7,7 @@ import { LessonService } from './lesson.service';
 import { LessonController } from './lesson.controller';
 import { LessonGeneratorWorker, LESSON_GENERATION_QUEUE } from './workers/lesson-generator.processor';
 import { CognitiveEngineModule } from '../cognitive-engine/cognitive-engine.module';
+import { LearnerModelModule } from '../learner-model/learner-model.module';
 import { AnalyticsModule } from '../analytics/analytics.module';
 
 @Module({
@@ -14,6 +15,7 @@ import { AnalyticsModule } from '../analytics/analytics.module';
     MongooseModule.forFeature([{ name: Lesson.name, schema: LessonSchema }]),
     BullModule.registerQueue({ name: LESSON_GENERATION_QUEUE }),
     CognitiveEngineModule,
+    LearnerModelModule,
     AnalyticsModule,
   ],
   controllers: [LessonController],

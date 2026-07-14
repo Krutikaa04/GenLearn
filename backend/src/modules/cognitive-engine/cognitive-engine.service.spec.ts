@@ -13,6 +13,7 @@ const emptyContext = (studentId: string): LearnerContext => ({
   evidenceCount: 0,
   hasHistory: false,
   assembledAt: new Date().toISOString(),
+  profile: null,
 });
 
 const validQuiz = {

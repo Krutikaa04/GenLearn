@@ -39,6 +39,13 @@ export interface LearnerContext {
   evidenceCount: number;
   hasHistory: boolean;
   assembledAt: string;
+  /**
+   * Persistent Learner Intelligence bundle (Sprint 2): learning identity/stage,
+   * velocity, trends, support dependency, inferred preferences, intervention
+   * effectiveness, and the most recent reflection. Null until a profile exists.
+   * This is the single learner-intelligence object every AI task receives.
+   */
+  profile: Record<string, unknown> | null;
 }
 
 /** Execution metadata captured for every AI call — the basis of central logging. */

@@ -3,6 +3,8 @@ import { Logger } from '@nestjs/common';
 import { Job } from 'bullmq';
 import { LessonRepository } from '../lesson.repository';
 import { CognitiveEngineService } from '../../cognitive-engine/cognitive-engine.service';
+import { LearnerProfileService } from '../../learner-model/learner-profile.service';
+import { TimelineEventType } from '../../learner-model/schemas/learner-timeline-event.schema';
 import { LessonStatus, DifficultyLevel } from '../schemas/lesson.schema';
 
 export const LESSON_GENERATION_QUEUE = 'lesson-generation';
@@ -22,6 +24,7 @@ export class LessonGeneratorWorker extends WorkerHost {
   constructor(
     private readonly lessonRepository: LessonRepository,
     private readonly cognitive: CognitiveEngineService,
+    private readonly learnerProfile: LearnerProfileService,
   ) {
     super();
   }
@@ -50,6 +53,16 @@ export class LessonGeneratorWorker extends WorkerHost {
       });
 
       this.logger.log(`Lesson ${lessonId} generated: "${result.title}"`);
+
+      // Persistent Learner Intelligence: record the lesson on the learner's
+      // timeline so intervention effectiveness can later credit it. Best-effort.
+      await this.learnerProfile
+        .recordTimelineEvent(studentId, TimelineEventType.LESSON_COMPLETED, {
+          topic,
+          summary: `Lesson generated: ${result.title}`,
+          data: { lessonId, difficulty },
+        })
+        .catch(() => undefined);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Unknown generation error';
       this.logger.error(`Lesson ${lessonId} generation failed: ${message}`);

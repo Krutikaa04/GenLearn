@@ -36,13 +36,35 @@ export class LearnerModelRepository {
     conceptId: string,
     update: { mastery: number; confidence: number; evidenceCount: number },
     misconceptionFlag: MisconceptionFlag | null,
+    intelligence?: {
+      trend: 'new' | 'improving' | 'declining' | 'stable';
+      lastPracticedAt: Date;
+      reviewPriority: number;
+      masterySample: { mastery: number; at: Date };
+    },
   ): Promise<void> {
+    // masteryHistory (capped) and misconceptionFlags (capped) can both be
+    // pushed in one write; merge them into a single $push so Mongo accepts it.
+    const push: Record<string, unknown> = {};
+    if (misconceptionFlag) push.misconceptionFlags = { $each: [misconceptionFlag], $slice: -20 };
+    if (intelligence) push.masteryHistory = { $each: [intelligence.masterySample], $slice: -30 };
+
     await this.masteryModel
       .updateOne(
         { studentId, conceptId },
         {
-          $set: { ...update, lastEvidenceAt: new Date() },
-          ...(misconceptionFlag ? { $push: { misconceptionFlags: { $each: [misconceptionFlag], $slice: -20 } } } : {}),
+          $set: {
+            ...update,
+            lastEvidenceAt: new Date(),
+            ...(intelligence
+              ? {
+                  trend: intelligence.trend,
+                  lastPracticedAt: intelligence.lastPracticedAt,
+                  reviewPriority: intelligence.reviewPriority,
+                }
+              : {}),
+          },
+          ...(Object.keys(push).length ? { $push: push } : {}),
         },
         { upsert: true },
       )

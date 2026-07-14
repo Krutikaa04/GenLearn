@@ -21,7 +21,8 @@ describe('ConversationService', () => {
       softDelete: jest.fn(),
     };
     aiGateway = { tutorChat: jest.fn() };
-    service = new ConversationService(repository as any, aiGateway as any);
+    const learnerProfile = { recordTimelineEvent: jest.fn().mockResolvedValue(undefined) };
+    service = new ConversationService(repository as any, aiGateway as any, learnerProfile as any);
   });
 
   describe('sendMessage', () => {

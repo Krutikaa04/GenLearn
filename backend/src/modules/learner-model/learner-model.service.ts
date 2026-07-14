@@ -9,10 +9,12 @@ import {
   topicToConceptId,
   updateConceptEvidence,
 } from './mastery-update';
-import { ConceptSnapshot, decideNextActivity } from './pedagogical-policy';
+import { ConceptSnapshot, decideNextActivity, PolicyDecision } from './pedagogical-policy';
 import { buildQuizBlueprint, QuizBlueprint } from './quiz-blueprint';
 import { DecisionStatus, DecisionTrigger } from './schemas/pedagogical-decision.schema';
 import { BehaviorFeatures, BehaviorFeaturesDocument } from '../telemetry/schemas/behavior-features.schema';
+import { LearnerProfileService, ConceptChange } from './learner-profile.service';
+import { computeConceptTrend, computeReviewPriority } from './learner-intelligence';
 
 export interface SessionBehaviorInput {
   perQuestion: {
@@ -33,6 +35,7 @@ export class LearnerModelService {
     @InjectModel(Quiz.name) private readonly quizModel: Model<QuizDocument>,
     @InjectModel(BehaviorFeatures.name)
     private readonly behaviorModel: Model<BehaviorFeaturesDocument>,
+    private readonly learnerProfile: LearnerProfileService,
   ) {}
 
   async getConceptMastery(studentId: string) {
@@ -345,6 +348,10 @@ export class LearnerModelService {
 
     // Post-update snapshot per touched concept — the policy's input.
     const touched = new Map<string, ConceptSnapshot>();
+    // Concept mastery *before* this session, captured on first sight, so the
+    // profile can record trends and per-concept improvement/decline.
+    const conceptBefore = new Map<string, number>();
+    const now = new Date();
 
     for (const answer of quiz.answers) {
       const question = questionById.get(answer.questionId);
@@ -362,6 +369,7 @@ export class LearnerModelService {
         ...secondaries.map((c) => [c, false] as const),
       ]) {
         const current = await this.repository.findOrCreate(studentId, conceptId);
+        if (!conceptBefore.has(conceptId)) conceptBefore.set(conceptId, current.mastery);
         const result = updateConceptEvidence(
           { mastery: current.mastery, confidence: current.confidence, evidenceCount: current.evidenceCount },
           {
@@ -372,11 +380,16 @@ export class LearnerModelService {
           },
         );
         const flagged = result.misconception && isPrimary;
+        // Concept-level intelligence: trend vs. the mastery at session start,
+        // review priority for future retention scheduling, freshly-practiced stamp.
+        const trend = computeConceptTrend(conceptBefore.get(conceptId) ?? current.mastery, result.mastery);
+        const reviewPriority = computeReviewPriority(result.mastery, result.confidence, now, now);
         await this.repository.applyEvidence(
           studentId,
           conceptId,
           { mastery: result.mastery, confidence: result.confidence, evidenceCount: result.evidenceCount },
           flagged ? { quizId, questionId: answer.questionId, flaggedAt: new Date() } : null,
+          { trend, lastPracticedAt: now, reviewPriority, masterySample: { mastery: result.mastery, at: now } },
         );
 
         const prev = touched.get(conceptId);
@@ -393,8 +406,43 @@ export class LearnerModelService {
 
     this.logger.log(`Learner model updated from quiz ${quizId} (${quiz.answers.length} answers)`);
 
-    await this.measureInterventionEffectiveness(studentId, quizId, touched);
-    await this.recordDecision(studentId, quizId, [...touched.values()]);
+    const assessedIntervention = await this.measureInterventionEffectiveness(studentId, quizId, touched);
+    const decision = await this.recordDecision(studentId, quizId, [...touched.values()]);
+
+    // Fold this session into the persistent learner profile (Sprint 2).
+    // Best-effort: a profile failure must never break the learner-model update.
+    try {
+      const correct = quiz.answers.filter((a) => a.isCorrect).length;
+      const scorePercent = Math.round((correct / quiz.answers.length) * 100);
+      const conceptChanges: ConceptChange[] = [...touched.values()].map((snap) => {
+        const before = conceptBefore.get(snap.conceptId) ?? snap.mastery;
+        return {
+          conceptId: snap.conceptId,
+          topic: snap.topic,
+          before,
+          after: snap.mastery,
+          trend: computeConceptTrend(before, snap.mastery),
+          misconception: snap.hasRecentMisconception,
+        };
+      });
+      const answerChanges = (behavior?.perQuestion ?? []).reduce((s, q) => s + (q.answerChanges ?? 0), 0);
+      const tabSwitches = (behavior?.perQuestion ?? []).filter((q) => q.answeredAfterTabSwitch === true).length;
+
+      await this.learnerProfile.updateAfterQuiz(studentId, {
+        quizId,
+        topic: quiz.topic,
+        adaptive: quiz.adaptive === true,
+        scorePercent,
+        conceptChanges,
+        behavior: { answerChanges, tabSwitches },
+        assessedIntervention,
+        nextRecommendation: decision
+          ? `${decision.trigger} → ${decision.action} on ${decision.conceptId} (${decision.difficulty})`
+          : null,
+      });
+    } catch (err) {
+      this.logger.warn(`Profile update failed for quiz ${quizId}: ${(err as Error).message}`);
+    }
   }
 
   /**
@@ -407,18 +455,21 @@ export class LearnerModelService {
     studentId: string,
     quizId: string,
     touched: Map<string, ConceptSnapshot>,
-  ): Promise<void> {
+  ): Promise<{ type: string; masteryDelta: number } | null> {
     const pending = await this.repository.findPendingDecision(studentId);
-    if (!pending || pending.sourceQuizId === quizId) return;
+    if (!pending || pending.sourceQuizId === quizId) return null;
 
     const snapshot = touched.get(pending.conceptId);
-    if (!snapshot) return;
+    if (!snapshot) return null;
 
     await this.repository.completeDecision(pending.decisionId, snapshot.mastery);
+    const masteryDelta = snapshot.mastery - pending.masteryBefore;
     this.logger.log(
       `Intervention assessed for ${studentId}: "${pending.conceptId}" ${pending.masteryBefore} → ${snapshot.mastery} ` +
-      `(${pending.trigger}/${pending.action}, Δ${snapshot.mastery - pending.masteryBefore})`,
+      `(${pending.trigger}/${pending.action}, Δ${masteryDelta})`,
     );
+    // Feeds the profile's per-intervention-type effectiveness rollup (Task 5).
+    return { type: pending.action, masteryDelta };
   }
 
   /**
@@ -431,15 +482,15 @@ export class LearnerModelService {
     studentId: string,
     sourceQuizId: string,
     touched: ConceptSnapshot[],
-  ): Promise<void> {
+  ): Promise<PolicyDecision | null> {
     const decision = decideNextActivity(touched);
-    if (!decision) return;
+    if (!decision) return null;
 
     const pending = await this.repository.findPendingDecision(studentId);
     if (pending) {
       const supersede =
         decision.trigger === DecisionTrigger.MISCONCEPTION && pending.trigger !== DecisionTrigger.MISCONCEPTION;
-      if (!supersede) return;
+      if (!supersede) return null;
       await this.repository.dismissDecision(pending.decisionId);
     }
 
@@ -468,5 +519,6 @@ export class LearnerModelService {
     this.logger.log(
       `Pedagogical decision for ${studentId}: ${decision.trigger} → ${decision.action} on "${decision.conceptId}" (${decision.difficulty})`,
     );
+    return decision;
   }
 }

@@ -40,6 +40,34 @@ export class ConceptMastery {
 
   @Prop({ type: [MisconceptionFlag], default: [] })
   misconceptionFlags: MisconceptionFlag[];
+
+  // ── Concept-level intelligence (Sprint 2, all additive/optional) ──
+
+  /** Direction of the last mastery movement. 'new' until enough evidence. */
+  @Prop({ type: String, enum: ['new', 'improving', 'declining', 'stable'], default: 'new' })
+  trend: 'new' | 'improving' | 'declining' | 'stable';
+
+  /** Recent mastery samples (capped) — the basis for trend/velocity calc. */
+  @Prop({ type: [{ mastery: Number, at: Date }], default: [] })
+  masteryHistory: { mastery: number; at: Date }[];
+
+  /** When the learner last actively practiced this concept. */
+  @Prop({ type: Date, default: null })
+  lastPracticedAt: Date | null;
+
+  /** How many times an intervention targeted this concept. */
+  @Prop({ default: 0 })
+  interventionCount: number;
+
+  // ── Retention scaffolding (Task 8 — stored now, used by a future sprint) ──
+
+  /** 0-100 priority for review; higher = more overdue/at-risk. */
+  @Prop({ default: 0 })
+  reviewPriority: number;
+
+  /** Qualitative retention direction; null until a forgetting model fills it. */
+  @Prop({ type: String, default: null })
+  retentionTrend: string | null;
 }
 
 export type ConceptMasteryDocument = ConceptMastery & Document;

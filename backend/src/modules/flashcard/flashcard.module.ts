@@ -7,6 +7,7 @@ import { FlashcardService } from './flashcard.service';
 import { FlashcardController } from './flashcard.controller';
 import { FlashcardGeneratorWorker, FLASHCARD_GENERATION_QUEUE } from './workers/flashcard-generator.processor';
 import { CognitiveEngineModule } from '../cognitive-engine/cognitive-engine.module';
+import { LearnerModelModule } from '../learner-model/learner-model.module';
 import { AnalyticsModule } from '../analytics/analytics.module';
 
 @Module({
@@ -14,6 +15,7 @@ import { AnalyticsModule } from '../analytics/analytics.module';
     MongooseModule.forFeature([{ name: FlashcardSet.name, schema: FlashcardSetSchema }]),
     BullModule.registerQueue({ name: FLASHCARD_GENERATION_QUEUE }),
     CognitiveEngineModule,
+    LearnerModelModule,
     AnalyticsModule,
   ],
   controllers: [FlashcardController],

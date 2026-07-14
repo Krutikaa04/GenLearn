@@ -2,12 +2,15 @@ import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/commo
 import { v4 as uuidv4 } from 'uuid';
 import { ConversationRepository } from './conversation.repository';
 import { CognitiveEngineService } from '../cognitive-engine/cognitive-engine.service';
+import { LearnerProfileService } from '../learner-model/learner-profile.service';
+import { TimelineEventType } from '../learner-model/schemas/learner-timeline-event.schema';
 
 @Injectable()
 export class ConversationService {
   constructor(
     private readonly conversationRepository: ConversationRepository,
     private readonly cognitive: CognitiveEngineService,
+    private readonly learnerProfile: LearnerProfileService,
   ) {}
 
   async sendMessage(
@@ -71,6 +74,16 @@ export class ConversationService {
         messages: turns,
       });
     }
+
+    // Persistent Learner Intelligence: record the tutor session on the learner's
+    // timeline (feeds tutor-reliance in support dependency). Best-effort.
+    await this.learnerProfile
+      .recordTimelineEvent(studentId, TimelineEventType.TUTOR_SESSION, {
+        topic,
+        summary: `Tutor session on ${topic}`,
+        data: { conversationId },
+      })
+      .catch(() => undefined);
 
     return {
       conversationId,

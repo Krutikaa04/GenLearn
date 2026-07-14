@@ -5,11 +5,13 @@ import { ConversationRepository } from './conversation.repository';
 import { ConversationService } from './conversation.service';
 import { ConversationController } from './conversation.controller';
 import { CognitiveEngineModule } from '../cognitive-engine/cognitive-engine.module';
+import { LearnerModelModule } from '../learner-model/learner-model.module';
 
 @Module({
   imports: [
     MongooseModule.forFeature([{ name: Conversation.name, schema: ConversationSchema }]),
     CognitiveEngineModule,
+    LearnerModelModule,
   ],
   controllers: [ConversationController],
   providers: [ConversationRepository, ConversationService],

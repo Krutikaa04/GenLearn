@@ -3,6 +3,8 @@ import { Logger } from '@nestjs/common';
 import { Job } from 'bullmq';
 import { FlashcardRepository } from '../flashcard.repository';
 import { CognitiveEngineService } from '../../cognitive-engine/cognitive-engine.service';
+import { LearnerProfileService } from '../../learner-model/learner-profile.service';
+import { TimelineEventType } from '../../learner-model/schemas/learner-timeline-event.schema';
 import { FlashcardSetStatus, FlashcardSourceType } from '../schemas/flashcard.schema';
 
 export const FLASHCARD_GENERATION_QUEUE = 'flashcard-generation';
@@ -22,6 +24,7 @@ export class FlashcardGeneratorWorker extends WorkerHost {
   constructor(
     private readonly flashcardRepository: FlashcardRepository,
     private readonly cognitive: CognitiveEngineService,
+    private readonly learnerProfile: LearnerProfileService,
   ) {
     super();
   }
@@ -46,6 +49,15 @@ export class FlashcardGeneratorWorker extends WorkerHost {
       });
 
       this.logger.log(`Flashcard set ${setId} generated: ${result.cards.length} cards`);
+
+      // Persistent Learner Intelligence: record the activity on the learner's
+      // timeline (feeds revision-reliance in support dependency). Best-effort.
+      await this.learnerProfile
+        .recordTimelineEvent(studentId, TimelineEventType.FLASHCARDS_GENERATED, {
+          summary: `Generated ${result.cards.length} flashcards from ${sourceType}`,
+          data: { setId, sourceType, sourceId, count: result.cards.length },
+        })
+        .catch(() => undefined);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Unknown error';
       this.logger.error(`Flashcard set ${setId} generation failed: ${message}`);
