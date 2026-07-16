@@ -242,6 +242,35 @@ describe('DashboardPage', () => {
     expect(screen.getByRole('button', { name: /Continue learning/i })).toBeInTheDocument();
   });
 
+  it('renders the explanation why and goal when the recommendation is explained', async () => {
+    (adaptiveApi.getRecommendation as any).mockResolvedValue({
+      data: {
+        data: {
+          decisionId: 'd-3',
+          conceptId: 'recursion-base-case',
+          topic: 'Recursion',
+          trigger: 'weak_concept',
+          action: 'quiz',
+          difficulty: 'beginner',
+          message: '"recursion base case" looks shaky — a quick beginner quiz will build it up.',
+          intervention: 'quiz',
+          explanation: {
+            recommendation: 'a targeted adaptive quiz on recursion base case',
+            why: ["Your recent answers show recursion base case isn't solid yet, so building it up now prevents problems in dependent topics."],
+            evidence: ['Current mastery: 40%'],
+            expectedOutcome: 'Raise your recursion base case mastery from 40% toward 70%.',
+            confidence: 'medium',
+          },
+        },
+      },
+    });
+
+    render(<DashboardPage />, { wrapper: wrapper() });
+
+    expect(await screen.findByText(/isn't solid yet/)).toBeInTheDocument();
+    expect(screen.getByText(/from 40% toward 70%/)).toBeInTheDocument();
+  });
+
   it('does not render the Continue Learning card when there is no plan', async () => {
     render(<DashboardPage />, { wrapper: wrapper() });
     await screen.findByText(/Rishi/);

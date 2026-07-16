@@ -65,6 +65,15 @@ export class PedagogicalDecision {
   generatedActivityId: string | null;
 
   /**
+   * The intervention type the EIIE actually selected for this decision (may be
+   * richer than `action`, e.g. worked_example/tutor/revision). Effectiveness
+   * measurement credits this type so intervention history reflects what the
+   * learner really did. Null on legacy decisions — falls back to `action`.
+   */
+  @Prop({ type: String, default: null })
+  selectedIntervention: string | null;
+
+  /**
    * The structured quiz blueprint derived from this decision — the contract
    * handed to LLM generation (target concept distribution, difficulty,
    * misconceptions to probe). Persisted for explainability/reproducibility.

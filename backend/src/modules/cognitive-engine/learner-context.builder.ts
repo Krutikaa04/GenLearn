@@ -7,6 +7,7 @@ import {
 } from '../learner-model/schemas/concept-mastery.schema';
 import { LearnerProfileService } from '../learner-model/learner-profile.service';
 import { AutonomousPlannerService } from '../learner-model/autonomous-planner.service';
+import { ExplainableIntelligenceService } from '../learner-model/explainable-intelligence.service';
 import { ConceptStanding, LearnerContext } from './ai-task.types';
 
 const WEAK_MAX = 50;
@@ -29,22 +30,27 @@ export class LearnerContextBuilder {
     private readonly masteryModel: Model<ConceptMasteryDocument>,
     private readonly profileService: LearnerProfileService,
     private readonly planner: AutonomousPlannerService,
+    private readonly explainable: ExplainableIntelligenceService,
   ) {}
 
   async build(studentId: string): Promise<LearnerContext> {
     const empty = this.emptyContext(studentId);
     if (!studentId) return empty;
 
-    // Persistent Learner Intelligence + the active Learning Plan. Both are
-    // read-only here and defensive (null on failure) so context assembly never
-    // blocks a generation task.
-    const [profile, plan] = await Promise.all([
+    // Persistent Learner Intelligence + the active Learning Plan + the current
+    // explained recommendation. All read-only and defensive (null on failure)
+    // so context assembly never blocks a generation task.
+    const [profile, plan, recommendation] = await Promise.all([
       this.profileService.buildIntelligenceContext(studentId).catch((err) => {
         this.logger.warn(`Profile context failed for ${studentId}: ${(err as Error).message}`);
         return null;
       }),
       this.planner.getPlanSummary(studentId).catch((err) => {
         this.logger.warn(`Plan context failed for ${studentId}: ${(err as Error).message}`);
+        return null;
+      }),
+      this.explainable.getRecommendationSummary(studentId).catch((err) => {
+        this.logger.warn(`Recommendation context failed for ${studentId}: ${(err as Error).message}`);
         return null;
       }),
     ]);
@@ -54,10 +60,10 @@ export class LearnerContextBuilder {
       rows = await this.masteryModel.find({ studentId }).lean<ConceptMasteryDocument[]>().exec();
     } catch (err) {
       this.logger.warn(`Context assembly failed for ${studentId}: ${(err as Error).message}`);
-      return { ...empty, profile, plan };
+      return { ...empty, profile, plan, recommendation };
     }
 
-    if (!rows.length) return { ...empty, profile, plan };
+    if (!rows.length) return { ...empty, profile, plan, recommendation };
 
     const standing = (m: ConceptMasteryDocument): ConceptStanding => ({
       conceptId: m.conceptId,
@@ -94,6 +100,7 @@ export class LearnerContextBuilder {
       assembledAt: new Date().toISOString(),
       profile,
       plan,
+      recommendation,
     };
   }
 
@@ -108,6 +115,7 @@ export class LearnerContextBuilder {
       assembledAt: new Date().toISOString(),
       profile: null,
       plan: null,
+      recommendation: null,
     };
   }
 }

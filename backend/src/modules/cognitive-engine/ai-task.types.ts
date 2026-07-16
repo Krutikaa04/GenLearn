@@ -54,6 +54,14 @@ export interface LearnerContext {
    * planner, not the business modules. Null until a plan exists.
    */
   plan: Record<string, unknown> | null;
+
+  /**
+   * The current explained recommendation (Sprint 4): selected intervention,
+   * learner-facing reasoning summary, expected outcome, and confidence. The
+   * engine requests this before every generation so business modules never
+   * decide interventions independently. Null when nothing is pending.
+   */
+  recommendation: Record<string, unknown> | null;
 }
 
 /** Execution metadata captured for every AI call — the basis of central logging. */

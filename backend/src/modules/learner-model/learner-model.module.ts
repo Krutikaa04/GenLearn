@@ -12,6 +12,7 @@ import { LearnerModelService } from './learner-model.service';
 import { LearnerProfileRepository } from './learner-profile.repository';
 import { LearnerProfileService } from './learner-profile.service';
 import { AutonomousPlannerService } from './autonomous-planner.service';
+import { ExplainableIntelligenceService } from './explainable-intelligence.service';
 import { AdaptiveController } from './adaptive.controller';
 
 @Module({
@@ -33,7 +34,13 @@ import { AdaptiveController } from './adaptive.controller';
     LearnerProfileRepository,
     LearnerProfileService,
     AutonomousPlannerService,
+    ExplainableIntelligenceService,
   ],
-  exports: [LearnerModelService, LearnerProfileService, AutonomousPlannerService],
+  exports: [
+    LearnerModelService,
+    LearnerProfileService,
+    AutonomousPlannerService,
+    ExplainableIntelligenceService,
+  ],
 })
 export class LearnerModelModule {}

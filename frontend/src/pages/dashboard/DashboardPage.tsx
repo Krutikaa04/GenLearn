@@ -90,12 +90,22 @@ interface Recommendation {
   action: 'lesson' | 'quiz';
   difficulty: string;
   message: string;
+  /** Sprint 4 explainability — optional so older payloads keep rendering. */
+  intervention?: string;
+  explanation?: {
+    recommendation: string;
+    why: string[];
+    evidence: string[];
+    expectedOutcome: string;
+    confidence: 'high' | 'medium' | 'low';
+  };
 }
 
 function RecommendedNext({ rec }: { rec: Recommendation }) {
   const to = rec.action === 'lesson'
     ? `/lessons?topic=${encodeURIComponent(rec.topic)}`
     : `/quizzes?topic=${encodeURIComponent(rec.topic)}&difficulty=${encodeURIComponent(rec.difficulty)}`;
+  const why = rec.explanation?.why?.[0];
   return (
     <div className="flex items-center justify-between gap-3 p-3 rounded-xl mb-3" style={{ background: 'var(--brand-light)' }}>
       <div className="flex items-start gap-2.5 min-w-0">
@@ -103,6 +113,16 @@ function RecommendedNext({ rec }: { rec: Recommendation }) {
         <div className="min-w-0">
           <p className="text-xs font-semibold mb-0.5" style={{ color: 'var(--brand)' }}>Recommended next</p>
           <p className="text-sm" style={{ color: 'var(--text-primary)' }}>{rec.message}</p>
+          {why && (
+            <p className="text-xs mt-1" style={{ color: 'var(--text-secondary)' }}>
+              <span className="font-semibold">Why:</span> {why}
+            </p>
+          )}
+          {rec.explanation?.expectedOutcome && (
+            <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
+              <span className="font-semibold">Goal:</span> {rec.explanation.expectedOutcome}
+            </p>
+          )}
         </div>
       </div>
       <Link

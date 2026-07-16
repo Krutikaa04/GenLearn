@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { LearnerModelService } from './learner-model.service';
 import { AutonomousPlannerService } from './autonomous-planner.service';
+import { ExplainableIntelligenceService } from './explainable-intelligence.service';
 import { isFeatureEnabled } from '../../common/feature-flags';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import type { JwtPayload } from '../../common/decorators/current-user.decorator';
@@ -13,17 +14,31 @@ export class AdaptiveController {
   constructor(
     private readonly learnerModelService: LearnerModelService,
     private readonly planner: AutonomousPlannerService,
+    private readonly explainable: ExplainableIntelligenceService,
     private readonly configService: ConfigService,
   ) {}
 
   @Get('recommendation')
-  @ApiOperation({ summary: "The student's current recommended next activity (null when none or feature disabled)" })
+  @ApiOperation({ summary: "The student's current recommended next activity, with evidence-based explanation (null when none or feature disabled)" })
   async getRecommendation(@CurrentUser() user: JwtPayload) {
     if (!isFeatureEnabled(this.configService, 'ADAPTIVE_LEARNING_ENABLED')) {
       return { data: null };
     }
     const recommendation = await this.learnerModelService.getRecommendation(user.userId);
-    return { data: recommendation };
+    if (!recommendation) return { data: null };
+
+    // Explainability (Sprint 4): attach WHY, evidence, and expected outcome.
+    // Additive and best-effort — existing consumers of the base fields are
+    // unaffected if explanation assembly fails.
+    const explained = await this.explainable.getExplainedRecommendation(user.userId).catch(() => null);
+    return {
+      data: {
+        ...recommendation,
+        ...(explained
+          ? { intervention: explained.intervention, explanation: explained.explanation }
+          : {}),
+      },
+    };
   }
 
   @Get('analysis/:quizId')

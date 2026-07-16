@@ -479,8 +479,10 @@ export class LearnerModelService {
       `Intervention assessed for ${studentId}: "${pending.conceptId}" ${pending.masteryBefore} → ${snapshot.mastery} ` +
       `(${pending.trigger}/${pending.action}, Δ${masteryDelta})`,
     );
-    // Feeds the profile's per-intervention-type effectiveness rollup (Task 5).
-    return { type: pending.action, masteryDelta };
+    // Feeds the profile's per-intervention-type effectiveness rollup. Credits
+    // the EIIE's actual selection when present; legacy decisions fall back to
+    // the coarse lesson/quiz action.
+    return { type: pending.selectedIntervention ?? pending.action, masteryDelta };
   }
 
   /**

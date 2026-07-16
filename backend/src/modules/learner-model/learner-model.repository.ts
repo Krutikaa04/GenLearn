@@ -100,4 +100,11 @@ export class LearnerModelRepository {
       .updateOne({ decisionId }, { $set: { generatedActivityId } })
       .exec();
   }
+
+  /** Record the EIIE's selected intervention so effectiveness credits it. */
+  async markInterventionSelected(decisionId: string, selectedIntervention: string): Promise<void> {
+    await this.decisionModel
+      .updateOne({ decisionId }, { $set: { selectedIntervention } })
+      .exec();
+  }
 }
