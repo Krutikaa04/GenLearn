@@ -13,7 +13,9 @@ import { LearnerProfileRepository } from './learner-profile.repository';
 import { LearnerProfileService } from './learner-profile.service';
 import { AutonomousPlannerService } from './autonomous-planner.service';
 import { ExplainableIntelligenceService } from './explainable-intelligence.service';
+import { LearningIntelligenceService } from './learning-intelligence.service';
 import { AdaptiveController } from './adaptive.controller';
+import { LipsController } from './lips.controller';
 
 @Module({
   imports: [
@@ -27,7 +29,7 @@ import { AdaptiveController } from './adaptive.controller';
       { name: BehaviorFeatures.name, schema: BehaviorFeaturesSchema },
     ]),
   ],
-  controllers: [AdaptiveController],
+  controllers: [AdaptiveController, LipsController],
   providers: [
     LearnerModelRepository,
     LearnerModelService,
@@ -35,12 +37,14 @@ import { AdaptiveController } from './adaptive.controller';
     LearnerProfileService,
     AutonomousPlannerService,
     ExplainableIntelligenceService,
+    LearningIntelligenceService,
   ],
   exports: [
     LearnerModelService,
     LearnerProfileService,
     AutonomousPlannerService,
     ExplainableIntelligenceService,
+    LearningIntelligenceService,
   ],
 })
 export class LearnerModelModule {}

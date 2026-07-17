@@ -18,12 +18,19 @@ vi.mock('../../api/adaptive.api', () => ({
   },
 }));
 
+vi.mock('../../api/lips.api', () => ({
+  lipsApi: {
+    coach: vi.fn(),
+  },
+}));
+
 vi.mock('../../store/auth.store', () => ({
   useAuthStore: vi.fn(),
 }));
 
 import { analyticsApi } from '../../api/analytics.api';
 import { adaptiveApi } from '../../api/adaptive.api';
+import { lipsApi } from '../../api/lips.api';
 import { useAuthStore } from '../../store/auth.store';
 
 const mockProgress = {
@@ -59,6 +66,7 @@ beforeEach(() => {
   (analyticsApi.getWeakTopics as any).mockResolvedValue({ data: { data: [] } });
   (adaptiveApi.getRecommendation as any).mockResolvedValue({ data: { data: null } });
   (adaptiveApi.getPlan as any).mockResolvedValue({ data: { data: null } });
+  (lipsApi.coach as any).mockResolvedValue({ data: { data: null } });
 });
 
 describe('DashboardPage', () => {
@@ -269,6 +277,26 @@ describe('DashboardPage', () => {
 
     expect(await screen.findByText(/isn't solid yet/)).toBeInTheDocument();
     expect(screen.getByText(/from 40% toward 70%/)).toBeInTheDocument();
+  });
+
+  it('renders the AI coach summary when a coach payload is present', async () => {
+    (lipsApi.coach as any).mockResolvedValue({
+      data: {
+        data: {
+          todaysFocus: 'Review recursion base case — declining and not yet solid.',
+          biggestImprovement: 'Recursion — up and trending well.',
+          currentWeakness: 'Recursion base case at 35% mastery.',
+          nextMilestone: 'Reach 50% mastery on recursion base case',
+          revisionReminder: '2 concepts due for revision (1 urgent).',
+        },
+      },
+    });
+
+    render(<DashboardPage />, { wrapper: wrapper() });
+
+    expect(await screen.findByText('Your AI coach')).toBeInTheDocument();
+    expect(screen.getByText(/Review recursion base case/)).toBeInTheDocument();
+    expect(screen.getByText('Reach 50% mastery on recursion base case')).toBeInTheDocument();
   });
 
   it('does not render the Continue Learning card when there is no plan', async () => {

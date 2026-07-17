@@ -5,8 +5,121 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { analyticsApi } from '../../api/analytics.api';
 import { adaptiveApi } from '../../api/adaptive.api';
+import { lipsApi } from '../../api/lips.api';
 import { Card } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
+
+const trendMeta: Record<string, { label: string; color: string; bg: string }> = {
+  improving: { label: '↑ improving', color: 'var(--success)', bg: 'var(--success-light)' },
+  declining: { label: '↓ declining', color: 'var(--danger)', bg: 'var(--danger-light)' },
+  stable: { label: '→ stable', color: 'var(--text-muted)', bg: 'var(--bg-subtle)' },
+  new: { label: 'new', color: 'var(--brand)', bg: 'var(--brand-light)' },
+};
+
+/** Evidence-based insights (Sprint 5, LIPS). Hidden when there's no signal. */
+function InsightsSection() {
+  const { data = [] } = useQuery({
+    queryKey: ['lips-insights'],
+    queryFn: () => lipsApi.insights().then((r) => r.data.data),
+  });
+  if (!Array.isArray(data) || data.length === 0) return null;
+  return (
+    <Card padding="md">
+      <div className="flex items-center gap-2 mb-3">
+        <Sparkles className="w-4 h-4" style={{ color: 'var(--brand)' }} />
+        <h2 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Learning insights</h2>
+      </div>
+      <ul className="space-y-1.5">
+        {data.map((insight: string, i: number) => (
+          <li key={i} className="text-sm flex items-start gap-2" style={{ color: 'var(--text-secondary)' }}>
+            <span style={{ color: 'var(--brand)' }}>•</span>{insight}
+          </li>
+        ))}
+      </ul>
+    </Card>
+  );
+}
+
+/** Concept-level progress: mastery, confidence, trend, last practiced, priority. */
+function ConceptProgressSection() {
+  const { data = [] } = useQuery({
+    queryKey: ['lips-concept-progress'],
+    queryFn: () => lipsApi.conceptProgress().then((r) => r.data.data),
+  });
+  if (!Array.isArray(data) || data.length === 0) return null;
+  return (
+    <Card padding="md">
+      <div className="flex items-center gap-2 mb-4">
+        <BarChart3 className="w-4 h-4" style={{ color: 'var(--brand)' }} />
+        <h2 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Concept mastery</h2>
+        <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: 'var(--brand-light)', color: 'var(--brand)' }}>
+          {data.length} concept{data.length !== 1 ? 's' : ''}
+        </span>
+      </div>
+      <div className="space-y-3">
+        {data.slice(0, 20).map((c: any) => {
+          const color = masteryColor(c.mastery);
+          const tm = trendMeta[c.trend] ?? trendMeta.new;
+          const last = c.lastPracticedAt ? new Date(c.lastPracticedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : '—';
+          return (
+            <div key={c.conceptId} className="flex items-center gap-3">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between mb-1 gap-2">
+                  <p className="text-sm font-medium truncate capitalize" style={{ color: 'var(--text-primary)' }}>{c.label}</p>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className="text-xs px-1.5 py-0.5 rounded-full" style={{ background: tm.bg, color: tm.color }}>{tm.label}</span>
+                    <span className="text-sm font-bold" style={{ color }}>{c.mastery}%</span>
+                  </div>
+                </div>
+                <AnimatedBar percent={c.mastery} color={color} />
+                <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
+                  confidence {Math.round((c.confidence ?? 0) * 100)}% · last practiced {last}
+                  {c.reviewPriority >= 60 && <span style={{ color: 'var(--danger)' }}> · review due</span>}
+                </p>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </Card>
+  );
+}
+
+const timelineIcon: Record<string, string> = {
+  quiz_attempted: '📝', adaptive_quiz: '🎯', concept_improved: '📈', concept_declined: '📉',
+  misconception_detected: '⚠️', lesson_completed: '📖', flashcards_generated: '🃏',
+  tutor_session: '💬', reflection: '🔍', intervention_assessed: '✅', intervention_recommended: '➡️',
+};
+
+/** Chronological learning timeline (Sprint 5, LIPS). */
+function LearningTimelineSection() {
+  const { data = [] } = useQuery({
+    queryKey: ['lips-timeline'],
+    queryFn: () => lipsApi.timeline(30).then((r) => r.data.data),
+  });
+  if (!Array.isArray(data) || data.length === 0) return null;
+  return (
+    <Card padding="md">
+      <div className="flex items-center gap-2 mb-4">
+        <Clock className="w-4 h-4" style={{ color: 'var(--brand)' }} />
+        <h2 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Learning timeline</h2>
+      </div>
+      <div className="space-y-2.5">
+        {data.map((e: any, i: number) => (
+          <div key={i} className="flex items-start gap-3">
+            <span className="text-base leading-none mt-0.5">{timelineIcon[e.type] ?? '•'}</span>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm" style={{ color: 'var(--text-primary)' }}>{e.summary ?? e.type.replace(/_/g, ' ')}</p>
+              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                {e.occurredAt ? new Date(e.occurredAt).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : ''}
+              </p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </Card>
+  );
+}
 
 function questionLabelStyle(label: string): { background: string; color: string } {
   switch (label) {
@@ -269,6 +382,11 @@ export function ProgressPage() {
           </div>
         </Card>
       )}
+
+      {/* Sprint 5 — Learning Intelligence & Prediction views */}
+      <InsightsSection />
+      <ConceptProgressSection />
+      <LearningTimelineSection />
 
       {/* Per-question behavioral analysis (adaptive) */}
       <QuestionAnalysisSection />

@@ -62,6 +62,13 @@ export interface LearnerContext {
    * decide interventions independently. Null when nothing is pending.
    */
   recommendation: Record<string, unknown> | null;
+
+  /**
+   * Forward-looking prediction bundle (Sprint 5, LIPS): next milestone, next
+   * concept, readiness to advance, and revision load. Assembled so plan/lesson/
+   * quiz generation is prediction-aware. Null until concept history exists.
+   */
+  prediction: Record<string, unknown> | null;
 }
 
 /** Execution metadata captured for every AI call — the basis of central logging. */

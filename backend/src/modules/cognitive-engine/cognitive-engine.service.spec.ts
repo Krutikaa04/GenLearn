@@ -16,6 +16,7 @@ const emptyContext = (studentId: string): LearnerContext => ({
   profile: null,
   plan: null,
   recommendation: null,
+  prediction: null,
 });
 
 const validQuiz = {

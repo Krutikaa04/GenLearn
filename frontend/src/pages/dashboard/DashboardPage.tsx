@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { analyticsApi } from '../../api/analytics.api';
 import { adaptiveApi } from '../../api/adaptive.api';
+import { lipsApi } from '../../api/lips.api';
 import { quizzesApi } from '../../api/quizzes.api';
 import { useAuthStore } from '../../store/auth.store';
 import { Card } from '../../components/ui/Card';
@@ -136,6 +137,50 @@ function RecommendedNext({ rec }: { rec: Recommendation }) {
   );
 }
 
+interface CoachSummary {
+  todaysFocus: string;
+  biggestImprovement: string | null;
+  currentWeakness: string | null;
+  nextMilestone: string;
+  revisionReminder: string | null;
+}
+
+/**
+ * AI Learning Coach summary (Sprint 5). Concise, actionable, evidence-derived —
+ * shows today's focus, next milestone, and revision reminder. Hidden until the
+ * learner has enough history for a coach summary.
+ */
+function AICoachCard({ coach }: { coach: CoachSummary }) {
+  const rows = [
+    { label: "Today's focus", value: coach.todaysFocus, icon: Compass },
+    { label: 'Next milestone', value: coach.nextMilestone, icon: TrendingUp },
+    { label: 'Biggest improvement', value: coach.biggestImprovement, icon: Sparkles },
+    { label: 'Revision', value: coach.revisionReminder, icon: AlertTriangle },
+  ].filter((r) => r.value);
+
+  return (
+    <Card padding="lg">
+      <div className="flex items-center gap-2 mb-4">
+        <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: 'var(--brand-light)' }}>
+          <Compass className="w-4 h-4" style={{ color: 'var(--brand)' }} />
+        </div>
+        <h2 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Your AI coach</h2>
+      </div>
+      <div className="space-y-2.5">
+        {rows.map(({ label, value, icon: Icon }) => (
+          <div key={label} className="flex items-start gap-2.5">
+            <Icon className="w-4 h-4 mt-0.5 shrink-0" style={{ color: 'var(--text-muted)' }} />
+            <div className="min-w-0">
+              <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>{label}</p>
+              <p className="text-sm" style={{ color: 'var(--text-primary)' }}>{value}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </Card>
+  );
+}
+
 function StatCard({ label, value, icon: Icon, to, color }: any) {
   return (
     <motion.div variants={staggerItem}>
@@ -193,6 +238,10 @@ export function DashboardPage() {
   const { data: plan } = useQuery<LearningPlan | null>({
     queryKey: ['learning-plan'],
     queryFn: () => adaptiveApi.getPlan().then((r) => r.data.data),
+  });
+  const { data: coach } = useQuery<CoachSummary | null>({
+    queryKey: ['ai-coach'],
+    queryFn: () => lipsApi.coach().then((r) => r.data.data),
   });
 
   const hour = new Date().getHours();
@@ -332,6 +381,9 @@ export function DashboardPage() {
           </div>
         </Card>
       )}
+
+      {/* AI coach summary (Sprint 5) */}
+      {coach && <AICoachCard coach={coach} />}
 
       {/* Bottom row */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
