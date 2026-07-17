@@ -85,7 +85,7 @@ export interface Prediction {
 }
 
 /** Predict readiness, the next concept, and the next milestone (rule-based). */
-export function predictFutureLearning(concepts: ConceptSignal[], now: Date = new Date()): Prediction {
+export function predictFutureLearning(concepts: ConceptSignal[]): Prediction {
   const readyToAdvance = concepts.filter((c) => c.mastery >= MASTERED_MIN && c.confidence >= 0.6).map((c) => c.conceptId);
   // Improving + mid mastery = on track to master soon.
   const likelyToMaster = concepts

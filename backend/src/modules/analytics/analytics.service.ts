@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { AnalyticsRepository } from './analytics.repository';
 import { BADGE_CATALOG } from './gamification/badges.catalog';
 import { levelForXp, xpForNextLevel, XP_REWARDS } from './gamification/xp.util';

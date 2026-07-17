@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsArray, IsNumber, IsString, IsUUID, Max, Min, ValidateNested } from 'class-validator';
+import { IsArray, IsNumber, IsUUID, Max, Min, ValidateNested } from 'class-validator';
 
 class AnswerDto {
   @IsUUID()

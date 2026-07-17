@@ -28,20 +28,20 @@ describe('learning-prediction', () => {
 
   describe('predictFutureLearning', () => {
     it('derives readiness, next concept, and a concrete milestone', () => {
-      const p = predictFutureLearning(concepts, NOW);
+      const p = predictFutureLearning(concepts);
       expect(p.readyToAdvance).toContain('tail-recursion');
       expect(p.likelyToMaster).toContain('recursion'); // improving, mid-band
       // Already-weak concepts are "needs revision", not "forgetting"; a solid-
       // but-slipping concept is what qualifies as likely-to-forget.
       expect(p.likelyToForget).not.toContain('recursion-base-case');
       const withSlipping = [...concepts, { conceptId: 'linked-list', topic: 'Lists', mastery: 72, confidence: 0.6, evidenceCount: 5, trend: 'declining' as const, lastPracticedAt: daysAgo(5), reviewPriority: 30 }];
-      expect(predictFutureLearning(withSlipping, NOW).likelyToForget).toContain('linked-list');
+      expect(predictFutureLearning(withSlipping).likelyToForget).toContain('linked-list');
       expect(p.nextConcept?.conceptId).toBe('recursion-base-case'); // weakest with evidence
       expect(p.nextMilestone).toMatch(/recursion base case/);
     });
 
     it('handles a learner with no concepts', () => {
-      const p = predictFutureLearning([], NOW);
+      const p = predictFutureLearning([]);
       expect(p.nextConcept).toBeNull();
       expect(p.nextMilestone).toContain('diagnostic');
     });
@@ -64,7 +64,7 @@ describe('learning-prediction', () => {
   describe('buildCoachSummary', () => {
     it('produces one concise line per coaching slot', () => {
       const revision = forecastRevision(concepts, NOW);
-      const prediction = predictFutureLearning(concepts, NOW);
+      const prediction = predictFutureLearning(concepts);
       const coach = buildCoachSummary(concepts, revision, prediction);
       expect(coach.todaysFocus).toContain('recursion base case');
       expect(coach.biggestImprovement).toContain('Recursion');
