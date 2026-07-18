@@ -12,6 +12,8 @@ import { Badge } from '../../components/ui/Badge';
 import { Input } from '../../components/ui/Input';
 import { MarkdownContent } from '../../components/ui/MarkdownContent';
 import { Modal } from '../../components/ui/Modal';
+import { Spinner } from '../../components/ui/Spinner';
+import { EmptyState } from '../../components/ui/EmptyState';
 import { usePaginatedList } from '../../hooks/usePaginatedList';
 import { staggerContainer, staggerItem, fadeInUp } from '../../lib/motion';
 
@@ -223,13 +225,9 @@ export function LessonsPage() {
       </div>
 
       {isLoading ? (
-        <div className="flex justify-center py-16"><Loader2 className="w-6 h-6 animate-spin" style={{ color: 'var(--text-muted)' }} /></div>
+        <Spinner center />
       ) : lessons.length === 0 ? (
-        <div className="text-center py-16">
-          <BookOpen className="w-10 h-10 mx-auto mb-3" style={{ color: 'var(--border-strong)' }} />
-          <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>No lessons yet</p>
-          <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>Generate your first lesson to begin</p>
-        </div>
+        <EmptyState icon={BookOpen} title="No lessons yet" description="Generate your first lesson to begin" />
       ) : (
         <motion.div className="space-y-2" initial="hidden" animate="visible" variants={staggerContainer}>
           {lessons.map((lesson: any) => (

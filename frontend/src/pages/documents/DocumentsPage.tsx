@@ -9,6 +9,8 @@ import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
 import { Modal } from '../../components/ui/Modal';
+import { Spinner } from '../../components/ui/Spinner';
+import { EmptyState } from '../../components/ui/EmptyState';
 import { usePaginatedList } from '../../hooks/usePaginatedList';
 import { staggerContainer, staggerItem } from '../../lib/motion';
 
@@ -214,19 +216,11 @@ export function DocumentsPage() {
 
       {/* List */}
       {isLoading ? (
-        <div className="flex justify-center py-16"><Loader2 className="w-6 h-6 animate-spin" style={{ color: 'var(--text-muted)' }} /></div>
+        <Spinner center />
       ) : docs.length === 0 ? (
-        <div className="text-center py-16">
-          <FileText className="w-10 h-10 mx-auto mb-3" style={{ color: 'var(--border-strong)' }} />
-          <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>No documents yet</p>
-          <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>Upload your first document to get started</p>
-        </div>
+        <EmptyState icon={FileText} title="No documents yet" description="Upload your first document to get started" />
       ) : filtered.length === 0 ? (
-        <div className="text-center py-12">
-          <Search className="w-8 h-8 mx-auto mb-3" style={{ color: 'var(--border-strong)' }} />
-          <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>No documents match your search</p>
-          <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>Try a different name or status filter</p>
-        </div>
+        <EmptyState icon={Search} size="sm" title="No documents match your search" description="Try a different name or status filter" />
       ) : (
         <motion.div className="space-y-2" initial="hidden" animate="visible" variants={staggerContainer}>
           {filtered.map((doc: any) => (

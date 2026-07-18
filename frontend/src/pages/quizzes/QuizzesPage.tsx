@@ -13,6 +13,8 @@ import { Card } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
 import { Input } from '../../components/ui/Input';
 import { Modal } from '../../components/ui/Modal';
+import { Spinner } from '../../components/ui/Spinner';
+import { EmptyState } from '../../components/ui/EmptyState';
 import { usePaginatedList } from '../../hooks/usePaginatedList';
 import { useQuizTelemetry } from '../../hooks/useQuizTelemetry';
 import { staggerContainer, staggerItem } from '../../lib/motion';
@@ -783,13 +785,9 @@ export function QuizzesPage() {
       </div>
 
       {isLoading ? (
-        <div className="flex justify-center py-16"><Loader2 className="w-6 h-6 animate-spin" style={{ color: 'var(--text-muted)' }} /></div>
+        <Spinner center />
       ) : quizzes.length === 0 ? (
-        <div className="text-center py-16">
-          <BrainCircuit className="w-10 h-10 mx-auto mb-3" style={{ color: 'var(--border-strong)' }} />
-          <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>No quizzes yet</p>
-          <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>Generate your first quiz to start testing</p>
-        </div>
+        <EmptyState icon={BrainCircuit} title="No quizzes yet" description="Generate your first quiz to start testing" />
       ) : (
         <motion.div className="space-y-2" initial="hidden" animate="visible" variants={staggerContainer}>
           {quizzes.map((quiz: any) => (

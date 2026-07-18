@@ -10,6 +10,8 @@ import { lessonsApi } from '../../api/lessons.api';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
+import { Spinner } from '../../components/ui/Spinner';
+import { EmptyState } from '../../components/ui/EmptyState';
 import { useModalA11y } from '../../components/ui/useModalA11y';
 import { ErrorBoundary } from '../../components/ErrorBoundary';
 import { springSoft } from '../../lib/motion';
@@ -451,13 +453,9 @@ export function FlashcardsPage() {
       )}
 
       {isLoading ? (
-        <div className="flex justify-center py-16"><Loader2 className="w-6 h-6 animate-spin" style={{ color: 'var(--text-muted)' }} /></div>
+        <Spinner center />
       ) : sets.length === 0 ? (
-        <div className="text-center py-16">
-          <Layers className="w-10 h-10 mx-auto mb-3" style={{ color: 'var(--border-strong)' }} />
-          <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>No flashcard sets yet</p>
-          <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>Generate cards from a document or lesson</p>
-        </div>
+        <EmptyState icon={Layers} title="No flashcard sets yet" description="Generate cards from a document or lesson" />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           {sets.map((set: any) => (
