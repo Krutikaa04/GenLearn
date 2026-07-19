@@ -6,6 +6,16 @@
 
 ---
 
+> ℹ️ **This handbook is design & planning history, not current-state documentation.**
+> It captures the vision, decision records (ADRs/PDRs), and original specifications
+> written *before* implementation. For documentation of the **current
+> implementation**, see [`/docs`](../docs) (start with the root
+> [README](../README.md)). Where a handbook document and `/docs` disagree, **`/docs`
+> is authoritative** — the specification books here (API, Database, Low-Level
+> Design) describe the *planned* shape and may have drifted from the code.
+
+---
+
 # Welcome
 
 Welcome to the **GenLearn Technical Design Authority (TDA)**.
@@ -28,7 +38,10 @@ This includes:
 - Claude Code
 - Other AI Coding Assistants
 
-If an implementation decision conflicts with this handbook, the handbook takes precedence.
+This handbook was the authoritative design reference **during** planning and
+implementation. Now that the platform is built, the current implementation and
+its [`/docs`](../docs) are authoritative for how the system actually behaves;
+this handbook is preserved for design intent and historical rationale.
 
 ---
 
@@ -460,15 +473,7 @@ LOCKED
 
 Implementation Status:
 
-Not Started
-
-Current Document:
-
-README
-
-Next Document:
-
-00A — Glossary & Ubiquitous Language
+Complete — see [`/docs`](../docs) for current-state documentation
 
 ---
 
