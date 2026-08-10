@@ -1,11 +1,14 @@
 """Gemini client — single shared instance with retry logic."""
 import json
+import logging
 import re
 from fastapi import HTTPException
 from google import genai
 from google.genai import types
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 from app.config import settings
+
+logger = logging.getLogger(__name__)
 
 _client = genai.Client(api_key=settings.GEMINI_API_KEY)
 
@@ -19,6 +22,11 @@ def raise_provider_error(exc: Exception) -> "HTTPException":
     # google-genai raises APIError subclasses carrying an HTTP `.code`.
     status = getattr(exc, "code", None) or getattr(exc, "status_code", None)
     msg = str(exc).lower()
+
+    # Log the real provider error server-side (type + status + message) so
+    # failures are diagnosable from the ai-service logs. Gemini error messages
+    # carry the model/status, not the API key, so this is safe to log.
+    logger.error("Gemini provider error [%s] status=%s: %s", type(exc).__name__, status, exc)
 
     if status in (401, 403) or "api key" in msg or "unauthenticated" in msg or "permission" in msg:
         return HTTPException(status_code=401, detail="AI provider authentication failed")
