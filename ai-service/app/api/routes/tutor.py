@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from typing import Optional
 from app.middleware.auth import verify_internal_key
-from app.services.gemini import generate_json
+from app.services.gemini import generate_json, raise_provider_error
 
 router = APIRouter(dependencies=[Depends(verify_internal_key)])
 
@@ -57,6 +57,6 @@ async def tutor_chat(request: TutorChatRequest):
         reply = data.get("reply", "").strip()
         suggestions = data.get("followUpSuggestions", [])[:3]
     except Exception as e:
-        raise HTTPException(status_code=502, detail=f"AI generation failed: {e}")
+        raise raise_provider_error(e)
 
     return TutorChatResponse(reply=reply, followUpSuggestions=suggestions)

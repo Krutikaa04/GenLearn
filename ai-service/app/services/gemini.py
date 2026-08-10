@@ -1,12 +1,36 @@
 """Gemini client — single shared instance with retry logic."""
 import json
 import re
+from fastapi import HTTPException
 from google import genai
 from google.genai import types
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 from app.config import settings
 
 _client = genai.Client(api_key=settings.GEMINI_API_KEY)
+
+
+def raise_provider_error(exc: Exception) -> "HTTPException":
+    """Translate a Gemini/provider exception into an HTTPException whose status
+    encodes the failure *category*, so the backend can show the user a specific
+    reason instead of a blanket error. Never includes the API key or raw
+    provider payloads — only a short, safe category label.
+    """
+    # google-genai raises APIError subclasses carrying an HTTP `.code`.
+    status = getattr(exc, "code", None) or getattr(exc, "status_code", None)
+    msg = str(exc).lower()
+
+    if status in (401, 403) or "api key" in msg or "unauthenticated" in msg or "permission" in msg:
+        return HTTPException(status_code=401, detail="AI provider authentication failed")
+    if status == 429 or "quota" in msg or "rate limit" in msg or "resource_exhausted" in msg:
+        return HTTPException(status_code=429, detail="AI provider rate limit reached")
+    if status == 404 or "not found" in msg or "model" in msg and "support" in msg:
+        return HTTPException(status_code=502, detail="AI provider model unavailable")
+    if "deadline" in msg or "timeout" in msg or "timed out" in msg:
+        return HTTPException(status_code=504, detail="AI provider request timed out")
+    if isinstance(status, int) and 500 <= status < 600:
+        return HTTPException(status_code=503, detail="AI provider temporarily unavailable")
+    return HTTPException(status_code=502, detail="AI generation failed")
 
 # gemini-2.5-flash runs an internal "thinking" pass before responding, which
 # adds ~10-40s of latency per call. Our prompts are explicit and structured, so

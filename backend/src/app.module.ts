@@ -17,6 +17,7 @@ import { StudyPlanModule } from './modules/studyplan/studyplan.module';
 import { ConversationModule } from './modules/conversation/conversation.module';
 import { TelemetryModule } from './modules/telemetry/telemetry.module';
 import { ClassroomModule } from './modules/classroom/classroom.module';
+import { AiGatewayModule } from './modules/ai-gateway/ai-gateway.module';
 import { HealthController } from './health/health.controller';
 
 @Module({
@@ -70,6 +71,7 @@ import { HealthController } from './health/health.controller';
     ConversationModule,
     TelemetryModule,
     ClassroomModule,
+    AiGatewayModule,
   ],
   controllers: [HealthController],
   providers: [

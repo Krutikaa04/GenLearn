@@ -1,4 +1,4 @@
-import { HttpException, ServiceUnavailableException } from '@nestjs/common';
+import { HttpException } from '@nestjs/common';
 import { of, throwError } from 'rxjs';
 import { AiGatewayService } from './ai-gateway.service';
 
@@ -133,24 +133,82 @@ describe('AiGatewayService', () => {
       }
     });
 
-    it('throws ServiceUnavailableException when AI service is unreachable (no response)', async () => {
-      const networkErr = new Error('ECONNREFUSED');
-      httpPost.mockReturnValue(throwError(() => networkErr));
+    it('maps an upstream 401 to AI_AUTH_FAILED', async () => {
+      const axiosErr = Object.assign(new Error('Unauthorized'), {
+        response: { status: 401, data: { detail: 'AI provider authentication failed' } },
+      });
+      httpPost.mockReturnValue(throwError(() => axiosErr));
 
-      await expect(service.processDocument({
-        documentId: 'd1', studentId: 's1', fileContent: 'YmFzZTY0', fileType: 'pdf',
-      })).rejects.toBeInstanceOf(ServiceUnavailableException);
+      try {
+        await service.generateLesson({ lessonId: 'l1', studentId: 's1', topic: 'X', difficulty: 'easy', documentIds: [] });
+        throw new Error('should have thrown');
+      } catch (err: any) {
+        expect(err.getResponse()).toMatchObject({ code: 'AI_AUTH_FAILED' });
+      }
     });
 
-    it('includes AI_PLATFORM_UNAVAILABLE code in the ServiceUnavailableException', async () => {
-      const networkErr = new Error('ETIMEDOUT');
+    it('maps an upstream 429 to AI_RATE_LIMITED', async () => {
+      const axiosErr = Object.assign(new Error('Too many requests'), {
+        response: { status: 429, data: {} },
+      });
+      httpPost.mockReturnValue(throwError(() => axiosErr));
+
+      try {
+        await service.generateQuiz({ quizId: 'q1', studentId: 's1', topic: 'T', difficulty: 'easy', questionCount: 5, documentIds: [] });
+        throw new Error('should have thrown');
+      } catch (err: any) {
+        expect(err.getResponse()).toMatchObject({ code: 'AI_RATE_LIMITED' });
+      }
+    });
+
+    it('classifies a connection refusal as AI_SERVICE_UNAVAILABLE (503)', async () => {
+      const networkErr = Object.assign(new Error('connect ECONNREFUSED'), { code: 'ECONNREFUSED' });
       httpPost.mockReturnValue(throwError(() => networkErr));
 
       try {
-        await service.tutorChat({ studentId: 's1', topic: 'T', message: 'hi', conversationHistory: [] });
+        await service.processDocument({ documentId: 'd1', studentId: 's1', fileContent: 'YmFzZTY0', fileType: 'pdf' });
+        throw new Error('should have thrown');
       } catch (err: any) {
-        expect(err.getResponse()).toMatchObject({ code: 'AI_PLATFORM_UNAVAILABLE' });
+        expect(err).toBeInstanceOf(HttpException);
+        expect(err.getStatus()).toBe(503);
+        expect(err.getResponse()).toMatchObject({ code: 'AI_SERVICE_UNAVAILABLE' });
       }
+    });
+
+    it('classifies a timeout as AI_TIMEOUT (504)', async () => {
+      const timeoutErr = Object.assign(new Error('timeout of 180000ms exceeded'), { code: 'ECONNABORTED' });
+      httpPost.mockReturnValue(throwError(() => timeoutErr));
+
+      try {
+        await service.tutorChat({ studentId: 's1', topic: 'T', message: 'hi', conversationHistory: [] });
+        throw new Error('should have thrown');
+      } catch (err: any) {
+        expect(err.getStatus()).toBe(504);
+        expect(err.getResponse()).toMatchObject({ code: 'AI_TIMEOUT' });
+      }
+    });
+
+    it('retries once on a connection-level failure (rides out a cold start)', async () => {
+      const networkErr = Object.assign(new Error('ECONNREFUSED'), { code: 'ECONNREFUSED' });
+      httpPost.mockReturnValue(throwError(() => networkErr));
+
+      await service
+        .generateLesson({ lessonId: 'l1', studentId: 's1', topic: 'X', difficulty: 'easy', documentIds: [] })
+        .catch(() => undefined);
+
+      // First attempt + one retry = two calls.
+      expect(httpPost).toHaveBeenCalledTimes(2);
+    });
+
+    it('does NOT retry when the AI service returns an HTTP error (no duplicate generation)', async () => {
+      const axiosErr = Object.assign(new Error('Gateway'), { response: { status: 500, data: {} } });
+      httpPost.mockReturnValue(throwError(() => axiosErr));
+
+      await service
+        .generateQuiz({ quizId: 'q1', studentId: 's1', topic: 'T', difficulty: 'easy', questionCount: 5, documentIds: [] })
+        .catch(() => undefined);
+
+      expect(httpPost).toHaveBeenCalledTimes(1);
     });
 
     it('sends X-Internal-Key header on every request', async () => {
@@ -161,12 +219,12 @@ describe('AiGatewayService', () => {
       expect(callArgs[2].headers['X-Internal-Key']).toBe('test-internal-key');
     });
 
-    it('sets a 120s timeout on every request', async () => {
+    it('sets a generous (cold-start-safe) timeout on every request', async () => {
       httpPost.mockReturnValue(of({ data: { cards: [] } }));
       await service.generateFlashcards({ setId: 's1', studentId: 's1', sourceType: 'document', sourceId: 'doc-1', count: 5 });
 
       const callArgs = httpPost.mock.calls[0];
-      expect(callArgs[2].timeout).toBe(120_000);
+      expect(callArgs[2].timeout).toBe(180_000);
     });
   });
 });

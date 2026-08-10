@@ -3,7 +3,7 @@ from pydantic import BaseModel
 from typing import Any, Optional
 from uuid import uuid4
 from app.middleware.auth import verify_internal_key
-from app.services.gemini import generate_json
+from app.services.gemini import generate_json, raise_provider_error
 from app.services.mongodb import get_db
 from app.services.retrieval import get_grounding_context
 
@@ -246,7 +246,7 @@ async def generate_quiz(request: GenerateQuizRequest):
     try:
         data = await generate_json(prompt, temperature=0.5)
     except Exception as e:
-        raise HTTPException(status_code=502, detail=f"AI generation failed: {e}")
+        raise raise_provider_error(e)
 
     for q in data.get("questions", []):
         q["questionId"] = str(uuid4())
@@ -260,5 +260,5 @@ async def generate_quiz(request: GenerateQuizRequest):
             timeLimitMinutes=request.timeLimitMinutes,
         )
         return result
-    except Exception as e:
-        raise HTTPException(status_code=502, detail=f"AI response malformed: {e}")
+    except Exception:
+        raise HTTPException(status_code=422, detail="AI response malformed")

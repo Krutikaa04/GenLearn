@@ -5,7 +5,7 @@ from uuid import uuid4
 from app.middleware.auth import verify_internal_key
 from app.services.text_extractor import extract_text
 from app.services.chunker import chunk_text
-from app.services.gemini import embed_text
+from app.services.gemini import embed_text, raise_provider_error
 from app.services.mongodb import get_db
 
 router = APIRouter(dependencies=[Depends(verify_internal_key)])
@@ -43,10 +43,15 @@ async def process_document(request: ProcessDocumentRequest):
 
     chunk_docs = []
     for chunk in chunks:
+        # An embedding failure is not recoverable by storing an empty vector —
+        # the chunk would be silently invisible to RAG retrieval and the document
+        # would look "ready" while being useless. Fail loudly with a categorized
+        # error so the backend marks the document FAILED (or retries) with a
+        # meaningful reason (auth / rate limit / provider outage).
         try:
             embedding = await embed_text(chunk.content)
-        except Exception:
-            embedding = []
+        except Exception as e:
+            raise raise_provider_error(e)
 
         chunk_docs.append({
             "chunkId": str(uuid4()),
