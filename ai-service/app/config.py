@@ -10,7 +10,12 @@ class Settings(BaseSettings):
     # AI Provider
     GEMINI_API_KEY: str
     MODEL_NAME: str = "gemini-2.5-flash"
-    EMBEDDING_MODEL: str = "models/text-embedding-004"
+    # text-embedding-004 was shut down by Google on 2026-01-14; gemini-embedding-001
+    # is the current GA text embedding model. Keep 768 output dims to match the
+    # existing Atlas "vector_index" (built for the 768-dim text-embedding-004) so
+    # vector search keeps working without rebuilding the index.
+    EMBEDDING_MODEL: str = "gemini-embedding-001"
+    EMBEDDING_DIMENSIONS: int = 768
 
     # Internal security
     INTERNAL_API_KEY: str

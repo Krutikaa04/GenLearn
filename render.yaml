@@ -90,7 +90,7 @@ services:
       - key: MODEL_NAME
         value: gemini-2.5-flash
       - key: EMBEDDING_MODEL
-        value: models/text-embedding-004
+        value: gemini-embedding-001
       - key: INTERNAL_API_KEY      # Must match backend INTERNAL_API_KEY
         sync: false
       - key: MONGODB_URI           # MongoDB Atlas (same cluster as backend)

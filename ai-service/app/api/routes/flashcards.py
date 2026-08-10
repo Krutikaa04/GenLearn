@@ -3,7 +3,7 @@ from pydantic import BaseModel
 from typing import Any, Optional
 from uuid import uuid4
 from app.middleware.auth import verify_internal_key
-from app.services.gemini import generate_json
+from app.services.gemini import generate_json, raise_provider_error
 from app.services.mongodb import get_db
 
 router = APIRouter(dependencies=[Depends(verify_internal_key)])
@@ -85,7 +85,7 @@ async def generate_flashcards(request: GenerateFlashcardsRequest):
     try:
         data = await generate_json(prompt, temperature=0.5)
     except Exception as e:
-        raise HTTPException(status_code=502, detail=f"AI generation failed: {e}")
+        raise raise_provider_error(e)
 
     for card in data.get("cards", []):
         card["cardId"] = str(uuid4())

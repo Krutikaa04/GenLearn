@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from typing import Optional
 from app.middleware.auth import verify_internal_key
-from app.services.gemini import generate_json
+from app.services.gemini import generate_json, raise_provider_error
 
 router = APIRouter(dependencies=[Depends(verify_internal_key)])
 
@@ -104,7 +104,7 @@ async def generate_study_plan(request: GenerateStudyPlanRequest):
     try:
         data = await generate_json(prompt, temperature=0.4)
     except Exception as e:
-        raise HTTPException(status_code=502, detail=f"AI generation failed: {e}")
+        raise raise_provider_error(e)
 
     try:
         return GenerateStudyPlanResponse(**data)

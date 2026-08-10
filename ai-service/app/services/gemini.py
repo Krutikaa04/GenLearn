@@ -1,6 +1,7 @@
 """Gemini client — single shared instance with retry logic."""
 import json
 import logging
+import math
 import re
 from fastapi import HTTPException
 from google import genai
@@ -82,19 +83,35 @@ async def generate_json(prompt: str, temperature: float = 0.3) -> dict:
     return json.loads(cleaned)
 
 
+def _normalize(values: list[float]) -> list[float]:
+    # gemini-embedding-001 returns already-normalized vectors only at its full
+    # 3072 dims; when we request a reduced output size (768) the vector must be
+    # L2-normalized ourselves for cosine/dot-product similarity to be correct.
+    norm = math.sqrt(sum(v * v for v in values))
+    if norm == 0:
+        return values
+    return [v / norm for v in values]
+
+
 async def embed_text(text: str) -> list[float]:
     result = await _client.aio.models.embed_content(
         model=settings.EMBEDDING_MODEL,
         contents=text,
-        config=types.EmbedContentConfig(task_type="RETRIEVAL_DOCUMENT"),
+        config=types.EmbedContentConfig(
+            task_type="RETRIEVAL_DOCUMENT",
+            output_dimensionality=settings.EMBEDDING_DIMENSIONS,
+        ),
     )
-    return result.embeddings[0].values
+    return _normalize(result.embeddings[0].values)
 
 
 async def embed_query(text: str) -> list[float]:
     result = await _client.aio.models.embed_content(
         model=settings.EMBEDDING_MODEL,
         contents=text,
-        config=types.EmbedContentConfig(task_type="RETRIEVAL_QUERY"),
+        config=types.EmbedContentConfig(
+            task_type="RETRIEVAL_QUERY",
+            output_dimensionality=settings.EMBEDDING_DIMENSIONS,
+        ),
     )
-    return result.embeddings[0].values
+    return _normalize(result.embeddings[0].values)

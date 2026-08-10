@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from typing import Any
 from app.middleware.auth import verify_internal_key
-from app.services.gemini import generate_text, embed_query
+from app.services.gemini import generate_text, embed_query, raise_provider_error
 from app.services.mongodb import get_db
 
 router = APIRouter(dependencies=[Depends(verify_internal_key)])
@@ -38,7 +38,7 @@ async def rag_query(request: RAGQueryRequest):
     try:
         query_embedding = await embed_query(request.question)
     except Exception as e:
-        raise HTTPException(status_code=502, detail=f"Embedding failed: {e}")
+        raise raise_provider_error(e)
 
     db = get_db()
     match_filter: dict[str, Any] = {"studentId": request.studentId}
@@ -81,7 +81,7 @@ async def rag_query(request: RAGQueryRequest):
     try:
         answer = await generate_text(RAG_PROMPT.format(context=context, question=request.question), temperature=0.3)
     except Exception as e:
-        raise HTTPException(status_code=502, detail=f"AI generation failed: {e}")
+        raise raise_provider_error(e)
 
     sources = [
         {
