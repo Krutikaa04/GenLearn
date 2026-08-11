@@ -6,12 +6,24 @@ import re
 from fastapi import HTTPException
 from google import genai
 from google.genai import types
-from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception
 from app.config import settings
 
 logger = logging.getLogger(__name__)
 
 _client = genai.Client(api_key=settings.GEMINI_API_KEY)
+
+
+def _is_transient(exc: BaseException) -> bool:
+    """Whether a provider error is worth retrying. Client errors (4xx) — above
+    all 429 rate limits — must NOT be retried: they won't succeed on retry and
+    retrying a 429 just burns more quota and deepens the rate limit. Retry only
+    transient failures (5xx, network, timeouts) and non-API errors like JSON
+    parse failures (which have no status and mean "regenerate")."""
+    status = getattr(exc, "code", None) or getattr(exc, "status_code", None)
+    if isinstance(status, int) and 400 <= status < 500:
+        return False
+    return True
 
 
 def raise_provider_error(exc: Exception) -> "HTTPException":
@@ -51,7 +63,7 @@ _NO_THINKING = types.ThinkingConfig(thinking_budget=0)
 @retry(
     stop=stop_after_attempt(3),
     wait=wait_exponential(multiplier=1, min=2, max=10),
-    retry=retry_if_exception_type(Exception),
+    retry=retry_if_exception(_is_transient),
     reraise=True,
 )
 async def generate_text(prompt: str, temperature: float = 0.7, json_mode: bool = False) -> str:
@@ -72,6 +84,7 @@ async def generate_text(prompt: str, temperature: float = 0.7, json_mode: bool =
 @retry(
     stop=stop_after_attempt(2),
     wait=wait_exponential(multiplier=1, min=2, max=6),
+    retry=retry_if_exception(_is_transient),
     reraise=True,
 )
 async def generate_json(prompt: str, temperature: float = 0.3) -> dict:
@@ -103,6 +116,27 @@ async def embed_text(text: str) -> list[float]:
         ),
     )
     return _normalize(result.embeddings[0].values)
+
+
+@retry(
+    stop=stop_after_attempt(3),
+    wait=wait_exponential(multiplier=1, min=2, max=10),
+    retry=retry_if_exception(_is_transient),
+    reraise=True,
+)
+async def embed_texts(texts: list[str]) -> list[list[float]]:
+    """Embed many texts in a single API request. Document ingestion used to fire
+    one request per chunk (a 40-chunk PDF = 40 requests), which trips free-tier
+    per-minute rate limits instantly; batching collapses that to one request."""
+    result = await _client.aio.models.embed_content(
+        model=settings.EMBEDDING_MODEL,
+        contents=texts,
+        config=types.EmbedContentConfig(
+            task_type="RETRIEVAL_DOCUMENT",
+            output_dimensionality=settings.EMBEDDING_DIMENSIONS,
+        ),
+    )
+    return [_normalize(e.values) for e in result.embeddings]
 
 
 async def embed_query(text: str) -> list[float]:

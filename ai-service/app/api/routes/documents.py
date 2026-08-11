@@ -6,7 +6,7 @@ from uuid import uuid4
 from app.middleware.auth import verify_internal_key
 from app.services.text_extractor import extract_text
 from app.services.chunker import chunk_text
-from app.services.gemini import embed_text, raise_provider_error
+from app.services.gemini import embed_texts, raise_provider_error
 from app.services.mongodb import get_db
 
 logger = logging.getLogger(__name__)
@@ -54,29 +54,32 @@ async def process_document(request: ProcessDocumentRequest):
     chunk_docs = []
     embed_failures = 0
     last_error: Exception | None = None
-    for chunk in chunks:
+    EMBED_BATCH = 100
+    for start in range(0, len(chunks), EMBED_BATCH):
+        batch = chunks[start:start + EMBED_BATCH]
         try:
-            embedding = await embed_text(chunk.content)
+            vectors = await embed_texts([c.content for c in batch])
         except Exception as e:
-            embed_failures += 1
+            embed_failures += len(batch)
             last_error = e
-            embedding = []
+            vectors = [[] for _ in batch]
             logger.warning(
-                "Embedding failed for document %s chunk %s: %s",
-                request.documentId, chunk.chunk_index, e,
+                "Embedding batch failed for document %s (chunks %d-%d): %s",
+                request.documentId, start, start + len(batch) - 1, e,
             )
 
-        chunk_docs.append({
-            "chunkId": str(uuid4()),
-            "documentId": request.documentId,
-            "studentId": request.studentId,
-            "content": chunk.content,
-            "embedding": embedding,
-            "pageNumber": None,
-            "heading": None,
-            "chunkIndex": chunk.chunk_index,
-            "tokenCount": chunk.token_count,
-        })
+        for chunk, embedding in zip(batch, vectors):
+            chunk_docs.append({
+                "chunkId": str(uuid4()),
+                "documentId": request.documentId,
+                "studentId": request.studentId,
+                "content": chunk.content,
+                "embedding": embedding,
+                "pageNumber": None,
+                "heading": None,
+                "chunkIndex": chunk.chunk_index,
+                "tokenCount": chunk.token_count,
+            })
 
     # Every embedding failed → the embedding provider/model is broken, not a blip.
     # Surface it as a categorized error so the document is marked FAILED with a
