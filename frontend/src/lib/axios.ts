@@ -6,7 +6,10 @@ export const API_BASE_URL = import.meta.env.VITE_API_URL
   ? `${import.meta.env.VITE_API_URL}/api/v1`
   : '/api/v1';
 
-const api = axios.create({ baseURL: API_BASE_URL });
+// withCredentials so the cross-site httpOnly refresh cookie (backend on Render,
+// frontend on Vercel) is stored on login and sent back to /auth/refresh. Without
+// it the browser drops the cookie and the session can't survive a page reload.
+const api = axios.create({ baseURL: API_BASE_URL, withCredentials: true });
 
 api.interceptors.request.use((config) => {
   const token = useAuthStore.getState().accessToken;

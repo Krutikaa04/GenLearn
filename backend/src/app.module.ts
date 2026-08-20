@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Logger, Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
@@ -34,6 +34,16 @@ import { HealthController } from './health/health.controller';
         serverSelectionTimeoutMS: 10_000,
         retryWrites: true,
         retryReads: true,
+        // Surface DB connectivity in the Render logs. A silent Mongo failure is
+        // the hardest thing to diagnose from the dashboard — with this, the logs
+        // say plainly whether the database connected, errored, or dropped.
+        connectionFactory: (connection: any) => {
+          const log = new Logger('Mongoose');
+          connection.on('connected', () => log.log('MongoDB connected'));
+          connection.on('error', (err: Error) => log.error(`MongoDB connection error: ${err.message}`));
+          connection.on('disconnected', () => log.warn('MongoDB disconnected'));
+          return connection;
+        },
       }),
       inject: [ConfigService],
     }),
@@ -45,7 +55,14 @@ import { HealthController } from './health/health.controller';
           connection: {
             host: url.hostname,
             port: parseInt(url.port || '6379', 10),
+            username: url.username || undefined,
             password: url.password || undefined,
+            // Managed Redis providers (Upstash, Render Key Value, Redis Cloud)
+            // require TLS and use a rediss:// URL. Without enabling tls here the
+            // socket handshake fails and every queue worker (lesson, quiz,
+            // document, flashcard generation) silently never connects, leaving
+            // jobs stuck "pending" forever. Enable it whenever the URL is rediss.
+            tls: url.protocol === 'rediss:' ? {} : undefined,
             // BullMQ's recommendation: let ioredis queue commands indefinitely
             // during a reconnect instead of failing them after a fixed retry
             // count, and keep attempting to reconnect with capped backoff

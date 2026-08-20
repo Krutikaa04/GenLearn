@@ -346,10 +346,15 @@ export class AuthService {
 
   private setRefreshCookie(res: { cookie: Function }, rawToken: string) {
     const isProd = this.configService.get('NODE_ENV') === 'production';
+    // The frontend (Vercel) and backend (Render) are on different sites, so the
+    // refresh cookie is a *cross-site* cookie. A browser only stores/sends that
+    // when it is SameSite=None + Secure. 'strict'/'lax' would silently drop the
+    // cookie on cross-site requests, so /auth/refresh would never see it and the
+    // user would be logged out on every reload. Secure is required for None.
     res.cookie('refreshToken', rawToken, {
       httpOnly: true,
       secure: isProd,
-      sameSite: isProd ? 'strict' : 'lax',
+      sameSite: isProd ? 'none' : 'lax',
       maxAge: 7 * 24 * 60 * 60 * 1000,
       path: '/api/v1/auth',
     });
